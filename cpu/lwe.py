@@ -63,19 +63,19 @@ class LWE:
     def subtract_lists(self, list1, list2):
         ans = []
         for val1, val2 in zip(list1, list2):
-            ans.append(val1 - val2)
+            ans.append(abs(val1 - val2))
         return ans
 
     def mask_list(self, list1, fn):
         return [fn(ele) for ele in list1]
 
     def dec(self, ct, s):
-        return self.mask_list(self.subtract_lists(ct, self.vector_matrix_multiply(s, self.A)), lambda x: x <= self.q / 4)
+        return self.mask_list(self.subtract_lists(ct, self.vector_matrix_multiply(s, self.A)), lambda x: (x > self.q / 4))
 
 if __name__ == "__main__":
     # setup
     lwe = LWE(A, m, n, q)
 
     pt = [random.randint(0, 1) for _ in range(m)] # TODO
-    s = [1 for _ in range(n)]
-    assert pt == (lwe.enc(pt, s))
+    s = [random.randint(0, q-1) for _ in range(n)]
+    assert pt == lwe.dec(lwe.enc(pt, s))
