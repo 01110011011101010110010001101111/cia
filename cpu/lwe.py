@@ -28,9 +28,9 @@ class LWE:
         solution = []
 
         # multiply with A
-        for row in range(m):
+        for row in range(self.m):
             subans = 0
-            for col in range(n):
+            for col in range(self.n):
                 subans = (subans + matrix[row][col] * vec[col]) % self.q
             solution.append(subans)
         return solution
@@ -52,12 +52,12 @@ class LWE:
     # def enc(self, b: List[int], s: List[int]) -> List[int]:
     def enc(self, b, s) -> List[int]:
         """
-        encode bit b
+        encode bit b with secret s
         """
         return (
             self.vector_matrix_multiply(s, self.A) + 
             self.generate_e() + 
-            [(bi * q // 2) % q for bi in range(self.m)]
+            [(b[bi] * self.q // 2) % self.q for bi in range(self.m)]
         )
         
     def subtract_lists(self, list1, list2):
@@ -74,8 +74,12 @@ class LWE:
 
 if __name__ == "__main__":
     # setup
-    lwe = LWE(A, m, n, q)
+    A = [A[0]]
+    lwe = LWE(A, 1, n, q)
 
-    pt = [random.randint(0, 1) for _ in range(m)] # TODO
+    pt = [random.randint(0, 1) for _ in range(1)] # TODO
     s = [random.randint(0, q-1) for _ in range(n)]
-    assert pt == lwe.dec(lwe.enc(pt, s))
+    print(pt)
+    print(lwe.dec(lwe.enc(pt, s), s))
+    assert pt == lwe.dec(lwe.enc(pt, s), s)
+
