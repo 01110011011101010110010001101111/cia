@@ -1,8 +1,8 @@
 import numpy as np
 
 # hyperparam selection
-k = 1000
-N = 784
+k = 2
+N = 5
 q = 64
 p = 4
 # s = [
@@ -56,5 +56,18 @@ def dec(B):
     # can check bottom bits and add one if needed
     return np.round(B_res / (q / p)) % p
 
-print("enc:", np.array(m) % p)
-print("dec:", dec(enc()))
+"""
+Operations on ciphertext
+"""
+
+def add_ct(ct1, ct2):
+    return ct1 + ct2
+
+def add_constant(ct, c):
+    return ct + c * q/p
+
+def mul_constant(ct, c):
+    return c*ct
+
+print("inp:", np.array(m) % p)
+print("dec:", dec(enc() * 2))
