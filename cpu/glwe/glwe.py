@@ -1,10 +1,13 @@
 import numpy as np
 
 # hyperparam selection
-k = 2
-N = 5
-q = 64
-p = 4
+k = 5
+N = 4
+q = 128
+p = 16
+# security param for how much noise, keep small if large constant multiplication
+LAMBDA = 5 
+
 # s = [
 #     [0, 1, 1, 0], # x^2 + x 
 #     [1, 1, 0, 1]  # x^3 + x^2 + 1
@@ -39,7 +42,7 @@ def polynomial_mult(s0, s1, size=N, base=q):
 def enc():
     # E = [1, 0, 1, -1] # \in q
     delta = q / p
-    E = np.random.randint(-delta/2, delta/2, N)
+    E = np.random.randint(-delta/LAMBDA, delta/LAMBDA, N)
     delta_m = np.array(m) * delta
 
     B = (np.array(polynomial_mult(A[0], s[0], N, q)) +
@@ -67,7 +70,9 @@ def add_constant(ct, c):
     return ct + c * q/p
 
 def mul_constant(ct, c):
-    return c*ct
+    return c * ct
 
 print("inp:", np.array(m) % p)
-print("dec:", dec(enc() * 2))
+print("eq: 2x + 1")
+print("pt computation:", (2 * (np.array(m) % p) + 1) % p)
+print("ct computation:", dec(add_constant(mul_constant(enc(), 2), 1)))
