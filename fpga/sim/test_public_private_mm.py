@@ -93,7 +93,7 @@ async def test_small(dut, N=N, k=k):
             dut.pk_A.value = int(make_num(A[h][i:i+4], 6))
             dut.A_idx.value = i
             await ClockCycles(dut.clk_in, 1, rising = False)
-            breakpoint()
+            # breakpoint()
             dut.A_valid.value = 0
 
             for j in range(0, N, 4):
