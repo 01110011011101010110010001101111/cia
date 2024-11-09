@@ -9,6 +9,7 @@ from cocotb.triggers import Timer, ClockCycles, RisingEdge, FallingEdge, ReadOnl
 from cocotb.utils import get_sim_time as gst
 from cocotb.runner import get_runner
 import numpy as np
+import random
 
 '''
 module private_public_mm(input wire clk_in,
@@ -28,8 +29,8 @@ module private_public_mm(input wire clk_in,
     );
 '''
 
-k = 1000
-N = 784
+k = 10
+N = 12
 q = 64 #64
 p = 16
 
@@ -50,10 +51,18 @@ def polynomial_mult(s0, s1, size=N, base=q):
 
     return result
 
+def reverse_bits(n, bit_length=32):
+    reversed_num = 0
+    for _ in range(bit_length):
+        reversed_num = (reversed_num << 1) | (n & 1)
+        n >>= 1
+    return reversed_num
 
 def make_num(list, bits):
     number = 0
-    for i, val in enumerate(reversed(list)):
+    #for i, val in enumerate(reversed(list)):
+        #number += (val << i*bits)
+    for i, val in enumerate(list):
         number += (val << i*bits)
     return number
 
@@ -84,9 +93,11 @@ async def test_small(dut, N=N, k=k):
             dut.pk_A.value = int(make_num(A[h][i:i+4], 6))
             dut.A_idx.value = i
             await ClockCycles(dut.clk_in, 1, rising = False)
+            breakpoint()
             dut.A_valid.value = 0
 
             for j in range(0, N, 4):
+                # breakpoint()
                 dut.s_valid.value = 1
                 # print("sk_s", int(make_num(s[h][i:i+4], 1)))
                 # breakpoint()
@@ -105,12 +116,23 @@ async def test_small(dut, N=N, k=k):
                 # print(value_B, index_B)
                 # breakpoint()
 
+                print(i, j)
+                print(A[h], s[h])
+                print(int(make_num(A[h][i:i+4], 6)), int(make_num(s[h][j:j+4], 1)))
+                print(value_B)
+                print("B valid ", dut.B_valid.value)
+
+                something = [int(x) for x in (polynomial_mult(A[h][i:i+4], s[h][j:j+4]))]
                 for l in range(8):
+                    print("Correct number: ", something[l])
+                    print(l, bit_slice(value_B, l*6, l*6+5))
                     if (index_B+l < len(output[h])):
                         output[h][index_B+l] += bit_slice(value_B, l*6, l*6+5)
+                        output[h][index_B+l] %= q
 
-        assert (output[h][i] == polynomial_mult(A[h], s[h])[i] for i in range(N)), f"Expected {polynomial_mult(A[h], s[h])} but got {output[h]}"
-
+        print(h)
+        print(output[h], (polynomial_mult(A[h], s[h])))
+        assert (np.array_equal(output[h], polynomial_mult(A[h], s[h]))), f"Expected {[int(x) for x in (polynomial_mult(A[h], s[h]))]} but got {output[h]}"    
 
 
 
