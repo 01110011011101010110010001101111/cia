@@ -1,3 +1,5 @@
+# TODO : FOR SOME REASON, ONLY SENDING EVERY OTHER GUY
+
 import serial
 import sys
 import numpy as np  # You can use NumPy for matrix handling
@@ -22,8 +24,8 @@ def send_matrix(matrix):
     print("Sending matrix!")
     for row in matrix:
         for sample in row:
-            ser.write(sample.tobytes())  # Send each sample as bytes
-            # ser.write(sample.to_bytes(1,'little'))
+            # ser.write(sample.tobytes())  # Send each sample as bytes
+            ser.write(int(sample).to_bytes(1,'little'))
     print("Matrix sent.")
 
 if __name__ == "__main__":
@@ -34,6 +36,6 @@ if __name__ == "__main__":
     # Example of how to pass a matrix from command line
     # You can modify this part to accept a matrix in a different way
     # For now, let's assume the matrix is hardcoded for demonstration
-    matrix = np.array([[0, 128, 255], [64, 192, 32]], dtype=np.uint8)  # Example matrix
+    matrix = np.array([[1, 128, 255], [64, 192, 32]], dtype=np.uint8)  # Example matrix
     send_matrix(matrix)
 

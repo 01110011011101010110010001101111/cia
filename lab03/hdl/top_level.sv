@@ -24,6 +24,10 @@ module top_level
    logic               sys_rst;
    assign sys_rst = btn[0];
 
+   // these don't need to be 8-bit but uhhhh yes
+   logic [7:0] q = 64;
+   logic [7:0] p = 16;
+
    // Checkoff 1: Microphone->SPI->UART->Computer
 
 //    assign spkl = 0;
@@ -113,8 +117,8 @@ module top_level
     )my_uart_transmit
     ( .clk_in(clk_100mhz),
       .rst_in(sys_rst),
-      .data_byte_in(1),
-      .trigger_in(1),
+      .data_byte_in(douta),
+      .trigger_in(new_data_out_buf),
       .busy_out(uart_busy),
       .tx_wire_out(uart_txd)
      );
@@ -132,6 +136,7 @@ module top_level
  
     logic [7:0] data_byte_out;
     logic new_data_out;
+    logic new_data_out_buf;
  
     uart_receive
     #(   .INPUT_CLOCK_FREQ(100_000_000), // 100 MHz
@@ -139,45 +144,48 @@ module top_level
     )my_uart_receive
     ( .clk_in(clk_100mhz),
       .rst_in(sys_rst),
-      .rx_wire_in (uart_rx_buf1),
+      .rx_wire_in(uart_rx_buf1),
       .new_data_out(new_data_out),
       .data_byte_out(dinb)
      );
  
  
    always_ff @(posedge clk_100mhz)begin
-     // CHECKOFF 1
-     // if SPI output data is there
-     audio_sample_waiting <= 1;
-     // audio_sample <= 1;
-     uart_data_in <= 0;
+     // // CHECKOFF 1
+     // // if SPI output data is there
+     // audio_sample_waiting <= 1;
+     // // audio_sample <= 1;
+     // uart_data_in <= 0;
  
-     // if (spi_read_data_valid) begin 
-     //     // wait is high
-     //     audio_sample_waiting <= 1;
-     // end else if (!uart_busy) begin
-     //     // low when u_art_busy is low
-     //     audio_sample_waiting <= 0;
-     // end
-     // if (spi_read_data_valid) begin
-     //     // assign audio sample (for pwm)
-     //     audio_sample <= spi_read_data[9:2];
-     //     uart_data_in <= spi_read_data[9:2];
-     // end 
-     // if (sw[0] && spi_read_data_valid) begin
-     //     uart_data_valid <= 1;
-     // end else begin
-     //     uart_data_valid <= 0;
-     // end
+     // // if (spi_read_data_valid) begin 
+     // //     // wait is high
+     // //     audio_sample_waiting <= 1;
+     // // end else if (!uart_busy) begin
+     // //     // low when u_art_busy is low
+     // //     audio_sample_waiting <= 0;
+     // // end
+     // // if (spi_read_data_valid) begin
+     // //     // assign audio sample (for pwm)
+     // //     audio_sample <= spi_read_data[9:2];
+     // //     uart_data_in <= spi_read_data[9:2];
+     // // end 
+     // // if (sw[0] && spi_read_data_valid) begin
+     // //     uart_data_valid <= 1;
+     // // end else begin
+     // //     uart_data_valid <= 0;
+     // // end
  
-     // CHECKOFF 2
-     // pass through
-     uart_data_valid <= 0;
+     // // CHECKOFF 2
+     // // pass through
+     // uart_data_valid <= 1;
      uart_rx_buf0 <= uart_rxd;
      uart_rx_buf1 <= uart_rx_buf0;
+     new_data_out_buf <= new_data_out;
    end
  
  
+    // 8+8+4 = 20 max (can technically do a tighter bound but so be it)
+    logic [20:0] total_count;
  
  
     // BRAM Memory
@@ -200,7 +208,7 @@ module top_level
         .RAM_DEPTH(BRAM_DEPTH)) audio_bram
         (
          // PORT A
-         .addra(addra),
+         .addra(total_count),
          .dina(0), // we only use port A for reads!
          .clka(clk_100mhz),
          .wea(1'b0), // read only
@@ -219,6 +227,84 @@ module top_level
          .doutb() // we only use port B for writes!
          );
  
+
+//    // BRAM Memory
+//    // We've configured this for you, but you'll need to hook up your address and data ports to the rest of your logic!
+// 
+//    parameter PT_BRAM_WIDTH = 4; // 1;
+//    parameter PT_BRAM_DEPTH = 196; // 784; // 40_000 samples = 5 seconds of samples at 8kHz sample
+//    parameter PT_ADDR_WIDTH = $clog2(PT_BRAM_DEPTH);
+// 
+//    // only using port a for reads: we only use dout
+//    logic [PT_BRAM_WIDTH-1:0]     douta_pt;
+//    logic [PT_ADDR_WIDTH-1:0]     addra_pt;
+// 
+//    // only using port b for writes: we only use din
+//    logic [PT_BRAM_WIDTH-1:0]     dinb_pt;
+//    logic [PT_ADDR_WIDTH-1:0]     addrb_pt;
+// 
+//    xilinx_true_dual_port_read_first_2_clock_ram
+//      #(.RAM_WIDTH(PT_BRAM_WIDTH),
+//        .RAM_DEPTH(PT_BRAM_DEPTH)) pt_bram
+//        (
+//         // PORT A
+//         .addra(addra_pt),
+//         .dina(0), // we only use port A for reads!
+//         .clka(clk_100mhz),
+//         .wea(1'b0), // read only
+//         .ena(1'b1),
+//         .rsta(sys_rst),
+//         .regcea(1'b1),
+//         .douta(douta),
+//         // PORT B
+//         .addrb(addrb_pt),
+//         .dinb(dinb_pt),
+//         .clkb(clk_100mhz),
+//         .web(1'b1), // write always
+//         .enb(1'b1),
+//         .rstb(sys_rst),
+//         .regceb(1'b1),
+//         .doutb() // we only use port B for writes!
+//         );
+// 
+//    parameter SK_BRAM_WIDTH = 4; //1;
+//    parameter SK_BRAM_DEPTH = 196_000; // 784_000; // 40_000 samples = 5 seconds of samples at 8kHz sample
+//    parameter SK_ADDR_WIDTH = $clog2(SK_BRAM_DEPTH);
+// 
+//    // only using port a for reads: we only use dout
+//    logic [SK_BRAM_WIDTH-1:0]     douta_sk;
+//    logic [SK_ADDR_WIDTH-1:0]     addra_sk;
+// 
+//    // only using port b for writes: we only use din
+//    logic [SK_BRAM_WIDTH-1:0]     dinb_sk;
+//    logic [SK_ADDR_WIDTH-1:0]     addrb_sk;
+// 
+//    xilinx_true_dual_port_read_first_2_clock_ram
+//      #(.RAM_WIDTH(SK_BRAM_WIDTH),
+//        .RAM_DEPTH(SK_BRAM_DEPTH)) sk_bram
+//        (
+//         // PORT A
+//         .addra(addra_sk),
+//         .dina(0), // we only use port A for reads!
+//         .clka(clk_100mhz),
+//         .wea(1'b0), // read only
+//         .ena(1'b1),
+//         .rsta(sys_rst),
+//         .regcea(1'b1),
+//         .douta(douta_sk),
+//         // PORT B
+//         .addrb(addrb_sk),
+//         .dinb(dinb_sk),
+//         .clkb(clk_100mhz),
+//         .web(1'b1), // write always
+//         .enb(1'b1),
+//         .rstb(sys_rst),
+//         .regceb(1'b1),
+//         .doutb() // we only use port B for writes!
+//         );
+
+
+
  
     // Memory addressing
     // TODO: instantiate an event counter that increments once every 8000th of a second
@@ -226,8 +312,8 @@ module top_level
     evt_counter #(.MAX_COUNT(BRAM_DEPTH)) port_a_counter(
          .clk_in(clk_100mhz),
          .rst_in(sys_rst),
-         .evt_in(spi_trigger),
-         .count_out(addra));
+         .evt_in(new_data_out_buf),
+         .count_out(total_count));
  
  
  
