@@ -186,6 +186,8 @@ module top_level
  
     // 8+8+4 = 20 max (can technically do a tighter bound but so be it)
     logic [20:0] total_count;
+    localparam BRAM_1_SIZE = 40; // MUST CHANGE
+    localparam BRAM_2_SIZE = 40; // MUST CHANGE
  
  
     // BRAM Memory
@@ -208,7 +210,7 @@ module top_level
         .RAM_DEPTH(BRAM_DEPTH)) audio_bram
         (
          // PORT A
-         .addra(total_count),
+         .addra(total_count < BRAM_1_SIZE ? total_count : BRAM_1_SIZE),
          .dina(0), // we only use port A for reads!
          .clka(clk_100mhz),
          .wea(1'b0), // read only
@@ -228,45 +230,45 @@ module top_level
          );
  
 
-//    // BRAM Memory
-//    // We've configured this for you, but you'll need to hook up your address and data ports to the rest of your logic!
-// 
-//    parameter PT_BRAM_WIDTH = 4; // 1;
-//    parameter PT_BRAM_DEPTH = 196; // 784; // 40_000 samples = 5 seconds of samples at 8kHz sample
-//    parameter PT_ADDR_WIDTH = $clog2(PT_BRAM_DEPTH);
-// 
-//    // only using port a for reads: we only use dout
-//    logic [PT_BRAM_WIDTH-1:0]     douta_pt;
-//    logic [PT_ADDR_WIDTH-1:0]     addra_pt;
-// 
-//    // only using port b for writes: we only use din
-//    logic [PT_BRAM_WIDTH-1:0]     dinb_pt;
-//    logic [PT_ADDR_WIDTH-1:0]     addrb_pt;
-// 
-//    xilinx_true_dual_port_read_first_2_clock_ram
-//      #(.RAM_WIDTH(PT_BRAM_WIDTH),
-//        .RAM_DEPTH(PT_BRAM_DEPTH)) pt_bram
-//        (
-//         // PORT A
-//         .addra(addra_pt),
-//         .dina(0), // we only use port A for reads!
-//         .clka(clk_100mhz),
-//         .wea(1'b0), // read only
-//         .ena(1'b1),
-//         .rsta(sys_rst),
-//         .regcea(1'b1),
-//         .douta(douta),
-//         // PORT B
-//         .addrb(addrb_pt),
-//         .dinb(dinb_pt),
-//         .clkb(clk_100mhz),
-//         .web(1'b1), // write always
-//         .enb(1'b1),
-//         .rstb(sys_rst),
-//         .regceb(1'b1),
-//         .doutb() // we only use port B for writes!
-//         );
-// 
+   // BRAM Memory
+   // We've configured this for you, but you'll need to hook up your address and data ports to the rest of your logic!
+
+   parameter PT_BRAM_WIDTH = 4; // 1;
+   parameter PT_BRAM_DEPTH = 196; // 784; // 40_000 samples = 5 seconds of samples at 8kHz sample
+   parameter PT_ADDR_WIDTH = $clog2(PT_BRAM_DEPTH);
+
+   // only using port a for reads: we only use dout
+   logic [PT_BRAM_WIDTH-1:0]     douta_pt;
+   logic [PT_ADDR_WIDTH-1:0]     addra_pt;
+
+   // only using port b for writes: we only use din
+   logic [PT_BRAM_WIDTH-1:0]     dinb_pt;
+   logic [PT_ADDR_WIDTH-1:0]     addrb_pt;
+
+   xilinx_true_dual_port_read_first_2_clock_ram
+     #(.RAM_WIDTH(PT_BRAM_WIDTH),
+       .RAM_DEPTH(PT_BRAM_DEPTH)) pt_bram
+       (
+        // PORT A
+        .addra(0), // total_count < BRAM_1_SIZE + BRAM_2_SIZE ? total_count - BRAM_1_SIZE : BRAM_2_SIZE),
+        .dina(0), // we only use port A for reads!
+        .clka(clk_100mhz),
+        .wea(1'b0), // read only
+        .ena(1'b1),
+        .rsta(sys_rst),
+        .regcea(1'b1),
+        .douta(douta_pt),
+        // PORT B
+        .addrb(addrb_pt),
+        .dinb(dinb_pt),
+        .clkb(clk_100mhz),
+        .web(1'b1), // write always
+        .enb(1'b1),
+        .rstb(sys_rst),
+        .regceb(1'b1),
+        .doutb() // we only use port B for writes!
+        );
+
 //    parameter SK_BRAM_WIDTH = 4; //1;
 //    parameter SK_BRAM_DEPTH = 196_000; // 784_000; // 40_000 samples = 5 seconds of samples at 8kHz sample
 //    parameter SK_ADDR_WIDTH = $clog2(SK_BRAM_DEPTH);
@@ -309,7 +311,7 @@ module top_level
     // Memory addressing
     // TODO: instantiate an event counter that increments once every 8000th of a second
     // for addressing the (port A) data we want to send out to LINE OUT!
-    evt_counter #(.MAX_COUNT(BRAM_DEPTH)) port_a_counter(
+    evt_counter #(.MAX_COUNT(BRAM_1_SIZE)) port_a_counter(
          .clk_in(clk_100mhz),
          .rst_in(sys_rst),
          .evt_in(new_data_out_buf),
