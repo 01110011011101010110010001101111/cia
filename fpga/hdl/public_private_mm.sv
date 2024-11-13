@@ -12,6 +12,7 @@ module public_private_mm
                     output logic s_ready,
                     output logic [9:0] idx_B,
                     output logic [41:0] B_out,
+                    input wire B_ready,
                     output logic B_valid
               );
 
@@ -103,28 +104,33 @@ module public_private_mm
 
                     B_valid <= 1;
                     
-                    if (s_idx_stored == DEPTH-4) begin
-                        A_ready <= 1;
-                        if(s_ready && s_valid) begin
-                            s_sk <= sk_s;
-                            s_idx_stored <= s_idx;
-                            state <= 3'b010;
-                            s_ready <= 0;
+                    if (B_ready) begin
+                        if (s_idx_stored == DEPTH-4) begin
+                            A_ready <= 1;
+                            if(s_ready && s_valid) begin
+                                s_sk <= sk_s;
+                                s_idx_stored <= s_idx;
+                                state <= 3'b010;
+                                s_ready <= 0;
+                                
+                            end else begin
+                                state <= 3'b000;
+                                s_ready <= 1;
+                            end
                             
                         end else begin
-                            state <= 3'b000;
-                            s_ready <= 1;
-                        end
-                        
-                    end else begin
-                        A_ready <= 0;
+                            A_ready <= 0;
 
-                        if(s_ready && s_valid) begin
-                            s_sk <= sk_s;
-                            s_idx_stored <= s_idx;
-                        end else begin
-                            state <= 3'b001;
+                            if(s_ready && s_valid) begin
+                                s_sk <= sk_s;
+                                s_idx_stored <= s_idx;
+                            end else begin
+                                state <= 3'b001;
+                            end
                         end
+                    end else begin
+                        s_ready <= 0;
+                        A_ready <= 0;
                     end
                     
                     

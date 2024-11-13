@@ -36,6 +36,8 @@ p = 16
 
 s = [np.random.randint(0, 2, N) for _ in range(k)]
 A = [np.random.randint(0, q, N) for _ in range(k)]
+b = [0 for _ in range(N)]
+e = [np.random.randint(0, 4) for _ in range(N)]
 
 def polynomial_mult(s0, s1, size=N, base=q):
     result = [0] * (size)
@@ -71,6 +73,28 @@ def bit_slice(number, start, end):
     mask = (1 << (end - start + 1)) - 1
     return shifted & mask
 
+'''
+module b_adder 
+    #(parameter DEPTH=784, parameter ADD = 1)
+    (input wire clk_in,
+                    input wire rst_in,
+                    input wire poly_valid,
+                    input wire [41:0] poly_in,
+                    input wire [9:0] poly_idx,
+                    output logic poly_ready,
+                    input wire e_valid,
+                    input wire [23:0] e_in,
+                    input wire [9:0] e_idx,
+                    output logic e_ready,
+                    input wire b_valid,
+                    input wire b_in[23:0],
+                    output logic b_ready,
+                    input wire sum_ready,
+                    output logic sum_valid,
+                    output logic sum[23:0],
+                    output logic sum_idx[9:0]
+              );
+'''
 
 @cocotb.test()
 async def test_small(dut, N=N, k=k):
@@ -98,7 +122,28 @@ async def test_small(dut, N=N, k=k):
             dut.A_valid.value = 0
 
             for j in range(0, N, 4):
-                # breakpoint()
+                dut.poly_valid.value = 1
+                dut.poly_in.value = make_num(polynomial_mult(A[i:i+4], s[i:i+4], 4), 6)
+
+                if (i + j < N):
+                    dut.e_valid.value = 1
+                    if h == 0 and i == 0:
+                        dut.e_in.value = e[j]
+                    else:
+                        dut.e_in.value = 0
+
+                    dut.b_valid.value = 1
+                    dut.b_valid.value = b[j+i]
+                else:
+                    pass
+
+                await ClockCycles(dut.clk_in, 1, rising = False)
+                
+                # set everything to valid false
+                # read values out and store in b
+                
+                
+                '''# breakpoint()
                 dut.s_valid.value = 1
                 # print("sk_s", int(make_num(s[h][i:i+4], 1)))
                 # breakpoint()
@@ -129,7 +174,7 @@ async def test_small(dut, N=N, k=k):
                     print(index_B, l, bit_slice(value_B, l*6, l*6+5))
                     if (index_B+l < len(output[h])):
                         output[h][index_B+l] += bit_slice(value_B, l*6, l*6+5)
-                        output[h][index_B+l] %= q
+                        output[h][index_B+l] %= q'''
 
         print(h)
         print(output)
@@ -144,7 +189,7 @@ def is_runner():
     sim = os.getenv("SIM", "icarus")
     proj_path = Path(__file__).resolve().parent.parent
     sys.path.append(str(proj_path / "sim" / "model"))
-    sources = [proj_path / "hdl" / "public_private_mm.sv"]
+    sources = [proj_path / "hdl" / "b_adder.sv"]
     # sources += [proj_path / "hdl" / "xilinx_true_dual_port_read_first_1_clock_ram.v"]
     build_test_args = ["-Wall"]
     parameters = {"DEPTH": N}
@@ -152,7 +197,7 @@ def is_runner():
     runner = get_runner(sim)
     runner.build(
         sources=sources,
-        hdl_toplevel="public_private_mm",
+        hdl_toplevel="b_adder",
         always=True,
         build_args=build_test_args,
         parameters=parameters,
@@ -161,8 +206,8 @@ def is_runner():
     )
     run_test_args = []
     runner.test(
-        hdl_toplevel="public_private_mm",
-        test_module="test_public_private_mm",
+        hdl_toplevel="b_adder",
+        test_module="b_adder",
         test_args=run_test_args,
         waves = True
     )
