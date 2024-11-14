@@ -6,12 +6,12 @@ module public_private_mm
                     input wire s_valid,
                     input wire [9:0] A_idx,
                     input wire [9:0] s_idx,
-                    input wire [23:0] pk_A,
-                    input wire [3:0] sk_s,
+                    input wire [35:0] pk_A,
+                    input wire [1:0] sk_s,
                     output logic A_ready,
                     output logic s_ready,
                     output logic [9:0] idx_B,
-                    output logic [41:0] B_out,
+                    output logic [53:0] B_out,
                     input wire B_ready,
                     output logic B_valid
               );
@@ -25,8 +25,8 @@ module public_private_mm
         Multiply each value of A with s.
 
   */
-    logic [23:0] A_pk;
-    logic [3:0] s_sk;
+    logic [35:0] A_pk;
+    logic [2:0] s_sk;
 
     logic[9:0] A_idx_stored;
     logic [9:0] s_idx_stored;
@@ -94,18 +94,22 @@ module public_private_mm
                 3'b011 : begin
                     idx_B <= s_idx_stored + A_idx_stored;
 
-                    B_out[5:0] <= (s_sk[0] ? A_pk[5:0] : 6'b0);
+                    B_out[17:0] <= (s_sk[0] ? A_pk[17:0] : 18'b0);
+                    B_out[35:18] <= (s_sk[1] ? A_pk[17:0] : 18'b0) + (s_sk[0] ? A_pk[35:18] : 18'b0);
+                    B_out[53:36] <= (s_sk[1] ? A_pk[35:18] : 18'b0);
+
+                    /* B_out[5:0] <= (s_sk[0] ? A_pk[5:0] : 6'b0);
                     B_out[11:6] <= 6'b111111 & ((s_sk[0] ? A_pk[11:6] : 6'b0) + (s_sk[1] ? A_pk[5:0] : 6'b0));
                     B_out[17:12] <= 6'b111111 & ((s_sk[0] ? A_pk[17:12] : 6'b0) + (s_sk[1] ? A_pk[11:6] : 6'b0) + (s_sk[2] ? A_pk[5:0] : 6'b0));
                     B_out[23:18] <= 6'b111111 & ((s_sk[0] ? A_pk[23:18] : 6'b0) + (s_sk[1] ? A_pk[17:12] : 6'b0) + (s_sk[2] ? A_pk[11:6] : 6'b0) + (s_sk[3] ? A_pk[5:0] : 6'b0));
                     B_out[29:24] <= 6'b111111 & ((s_sk[1] ? A_pk[23:18] : 6'b0) + (s_sk[2] ? A_pk[17:12] : 6'b0) + (s_sk[3] ? A_pk[11:6] : 6'b0));
                     B_out[35:30] <= 6'b111111 & ((s_sk[2] ? A_pk[23:18] : 6'b0) + (s_sk[3] ? A_pk[17:12] : 6'b0));
-                    B_out[41:36] <= (s_sk[3] ? A_pk[23:18] : 6'b0);
+                    B_out[41:36] <= (s_sk[3] ? A_pk[23:18] : 6'b0);*/
 
                     B_valid <= 1;
                     
                     if (B_ready) begin
-                        if (s_idx_stored == DEPTH-4) begin
+                        if (s_idx_stored == DEPTH-2) begin
                             A_ready <= 1;
                             if(s_ready && s_valid) begin
                                 s_sk <= sk_s;
