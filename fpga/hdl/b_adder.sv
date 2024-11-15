@@ -1,29 +1,28 @@
-module b_adder 
-    #(parameter DEPTH=784, parameter ADD = 1)
+module b_adder
+    #(parameter DEPTH=100, parameter ADD = 1)
     (input wire clk_in,
                     input wire rst_in,
                     input wire poly_valid,
-                    input wire [41:0] poly_in,
+                    input wire [53:0] poly_in,
                     input wire [9:0] poly_idx,
                     output logic poly_ready,
                     input wire e_valid,
-                    input wire [23:0] e_in,
+                    input wire [35:0] e_in,
                     input wire [9:0] e_idx,
                     output logic e_ready,
                     input wire b_valid,
-                    input wire b_in[23:0],
+                    input wire [35:0] b_in,
                     output logic b_ready,
                     input wire sum_ready,
                     output logic sum_valid,
-                    output logic sum[23:0],
-                    output logic sum_idx[9:0]
+                    output logic [35:0] sum,
+                    output logic [9:0] sum_idx
               );
 
 /*
 If ADD = 0, will subtract poly from b
 */
-    logic poly_top[23:0]; // top 24 bits of polynomial [43:24]
-    logic poly_bottom[23:0]; // bottom 24 bits of polynomial [23:0]
+    logic [17:0] poly_top; // top 17 bits of polynomial [43:24]
     //logic poly_idx_buffer[9:0];
     //logic e_buffer[23:0];
     //logic b_buffer[23:0];
@@ -34,9 +33,7 @@ If ADD = 0, will subtract poly from b
     always_ff @(posedge clk_in) begin
         if (rst_in) begin
             sum_valid <= 0;
-            poly_bottom <= 0;
-            poly_top <= 0;
-            inputs_ready <= 0;
+            poly_top <= 18'b0;
             poly_ready <= 0;
             b_ready <= 0;
             e_ready <= 0;
@@ -58,19 +55,24 @@ If ADD = 0, will subtract poly from b
                     // set sum to valid and store sum
                     sum_valid <= 1;
                     sum_idx <= poly_idx;
-                    poly_top <= poly[43:24];
+                    poly_top <= (poly_idx < DEPTH - 2)?poly_in[53:36]:0;
+
+                    sum[17:0] <= poly_top[17:0] + poly_in[17:0] + b_in[17:0] + e_in[17:0];
+                    sum[35:18] <= poly_in[35:18] + b_in[35:18] + e_in[35:18];
                     
-                    sum[5:0] <= poly_top[5:0] + poly[5:0] + b_in[5:0] + e_in[5:0];
-                    sum[11:6] <= poly_top[11:6] + poly[11:6] + b_in[11:6] + e_in[11:6];
-                    sum[17:12] <= poly_top[17:12] + poly[17:12] + b_in[17:12] + e_in[17:12];
-                    sum[23:18] <= poly_top[23:18] + poly[23:18] + b_in[23:18] + e_in[23:18];
+                    //sum[5:0] <= poly_top[5:0] + poly[5:0] + b_in[5:0] + e_in[5:0];
+                    //sum[11:6] <= poly_top[11:6] + poly[11:6] + b_in[11:6] + e_in[11:6];
+                    //sum[17:12] <= poly_top[17:12] + poly[17:12] + b_in[17:12] + e_in[17:12];
+                    //sum[23:18] <= poly_top[23:18] + poly[23:18] + b_in[23:18] + e_in[23:18];
                     
-                end else if (poly_idx > e_idx) begin
+                end else if (poly_idx >= DEPTH) begin
                     // only poly changes (poly index too high)
                     sum_valid <= 0;
                     poly_ready <= 1;
                     b_ready <= 0;
                     e_ready <= 0;
+                    poly_top <= 0;
+                    
                 end else begin
                     // nothing waiting for all valid
                     sum_valid <= 0;

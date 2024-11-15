@@ -11,31 +11,15 @@ from cocotb.runner import get_runner
 import numpy as np
 import random
 
-'''
-module private_public_mm(input wire clk_in,
-                    input wire rst_in,
-                    input wire A_valid,
-                    input wire s_valid,
-                    input wire [9:0] A_idx,
-                    input wire [9:0] s_idx,
-                    input wire [23:0] pk_A,
-                    input wire [3:0] sk_s,
-                    output wire A_ready,
-                    output wire s_ready,
-                    input wire B_ready,
-                    output wire [9:0] idx_B,
-                    output wire [47:0] out_B,
-                    output wire B_valid
-    );
-'''
-
 k = 10
 N = 12
-q = 64 #64
+q = 2**18 #64
 p = 16
 
 s = [np.random.randint(0, 2, N) for _ in range(k)]
 A = [np.random.randint(0, q, N) for _ in range(k)]
+A[0][0] = 0
+A[0][1] = 0
 b = [0 for _ in range(N)]
 e = [np.random.randint(0, 4) for _ in range(N)]
 
@@ -98,87 +82,108 @@ module b_adder
 
 @cocotb.test()
 async def test_small(dut, N=N, k=k):
+    b_exp = [e[i] for i in range(N)]
+
     """Cocotb test, checks if inputs are as expected, will output be as expected"""
     dut._log.info("Starting...")
     cocotb.start_soon(Clock(dut.clk_in, 10, units="ns").start())
     dut.rst_in.value = 0
     await ClockCycles(dut.clk_in,3, rising=False)
     dut.rst_in.value = 1
+    dut.sum_ready.value = 1
     await ClockCycles(dut.clk_in,5, rising=False)
-
-    output = [[0]*N for _ in range(k)]
+    dut.rst_in.value = 0
+    await ClockCycles(dut.clk_in,5, rising=False)
     
     for h in range(k):
-        print(h)
-        for i in range(0, N, 4):
+        # print(h)
+        for i in range(0, N, 2):
             # await RisingEdge(dut.A_ready)
-            await ClockCycles(dut.clk_in, 1, rising = False)
-            dut.A_valid.value = 1
+            # await ClockCycles(dut.clk_in, 1, rising = False)
+            '''dut.poly_valid.value = 1
             dut.B_ready.value = 1
             dut.pk_A.value = int(make_num(A[h][i:i+4], 6))
-            dut.A_idx.value = i
-            await ClockCycles(dut.clk_in, 1, rising = False)
+            dut.A_idx.value = i'''
+            # await ClockCycles(dut.clk_in, 1, rising = False)
             # breakpoint()
-            dut.A_valid.value = 0
+            # dut.A_valid.value = 0
 
-            for j in range(0, N, 4):
+            for j in range(0, N, 2):
                 dut.poly_valid.value = 1
-                dut.poly_in.value = make_num(polynomial_mult(A[i:i+4], s[i:i+4], 4), 6)
 
-                if (i + j < N):
+                # breakpoint()
+                dut.poly_in.value = int(make_num(polynomial_mult(A[h][i:i+2], s[h][j:j+2], size=3), 18))
+                dut.poly_idx.value = i+j
+
+                if (i + j + 2 <= N):
                     dut.e_valid.value = 1
+                    dut.e_idx.value = i+j
                     if h == 0 and i == 0:
-                        dut.e_in.value = e[j]
+                        # breakpoint()
+                        print("j is ", j, " e is ", e[j:j+2])
+                        dut.e_in.value = int(make_num(e[j:j+2], 18))
                     else:
                         dut.e_in.value = 0
 
                     dut.b_valid.value = 1
-                    dut.b_valid.value = b[j+i]
+                    dut.b_in.value = int(make_num(b[j+i: j+i+2], 18))
                 else:
                     pass
 
-                await ClockCycles(dut.clk_in, 1, rising = False)
-                
-                # set everything to valid false
-                # read values out and store in b
-                
-                
-                '''# breakpoint()
-                dut.s_valid.value = 1
-                # print("sk_s", int(make_num(s[h][i:i+4], 1)))
                 # breakpoint()
-                dut.sk_s.value = int(make_num(s[h][j:j+4], 1))
-                
-                dut.s_idx.value = j
-
-                await ClockCycles(dut.clk_in, 1, rising = False)
-                dut.s_valid.value = 0
-
                 await ClockCycles(dut.clk_in, 1, rising = False)
 
-                index_B = dut.idx_B.value
-                value_B = dut.B_out.value
+                dut.b_valid.value = 0
+                dut.e_valid.value = 0
+                dut.poly_valid.value = 0
 
-                # print(value_B, index_B)
+                if dut.sum_valid.value:
+                    index_sum = dut.sum_idx.value
+                    value_sum = dut.sum.value
+                    print("===================")
+                    print("A", A[h][i:i+2], "S ", s[h][j:j+2])
+                    print(polynomial_mult(A[h][i:i+2], s[h][j:j+2], size=3))
+                    # print(index_sum)
+
+                    for l in range(2):
+                        #print("Correct number: ", something[l])
+                        '''print("===================")
+                        
+                        print("poly ", dut.poly_in.value)
+                        print("e ", dut.e_in.value)
+                        print("b ", dut.b_in.value)'''
+                        if (index_sum+l < len(b)):
+                            print("index sum ", index_sum)
+                            print(i+j+l)
+                            print(index_sum, l, bit_slice(value_sum, l*18, l*18+17))
+                            b[index_sum+l] = bit_slice(value_sum, l*18, l*18+17)
+                            b[index_sum+l] %= q
+                else:
+                    index_sum = dut.sum_idx.value
+                    value_sum = 0
+
+                print("===================")
+
                 # breakpoint()
+                await ClockCycles(dut.clk_in, 1, rising = False)
 
-                print(i, j)
-                print(A[h], s[h])
-                print(int(make_num(A[h][i:i+4], 6)), int(make_num(s[h][j:j+4], 1)))
-                print(value_B)
-                print("B valid ", dut.B_valid.value)
+                # something = [int(x) for x in (polynomial_mult(A[h][i:i+2], s[h][j:j+2]))
 
-                something = [int(x) for x in (polynomial_mult(A[h][i:i+4], s[h][j:j+4]))]
-                for l in range(8):
-                    print("Correct number: ", something[l])
-                    print(index_B, l, bit_slice(value_B, l*6, l*6+5))
-                    if (index_B+l < len(output[h])):
-                        output[h][index_B+l] += bit_slice(value_B, l*6, l*6+5)
-                        output[h][index_B+l] %= q'''
+            print("I is ", i, " H is ", h)
+            print(polynomial_mult(A[h][i:i+2], s[h]))
+            # MAKE THIS EXP BETTER INCLUDE LATER B_exp
+            b_exp = [b_exp[r] for r in range(i)]+[(polynomial_mult(A[h][i:i+2], s[h])[r-i] + b_exp[r])%q for r in range(i, len(b_exp))]
+            assert (np.array_equal(b, b_exp)), f"Expected {[int(x) for x in (b_exp)]} but got {b}" 
 
         print(h)
-        print(output)
-        assert (np.array_equal(output[h], polynomial_mult(A[h], s[h]))), f"Expected {[int(x) for x in (polynomial_mult(A[h], s[h]))]} but got {output[h]}"    
+        # breakpoint()
+        print("All A: ", A[h])
+        print("all s: ", s[h])
+        print("all e: ", e)
+        print(polynomial_mult(A[h], s[h]))
+       # breakpoint(q
+        # b_exp = [(polynomial_mult(A[h], s[h])[i] + b_exp[i])%q for i in range(len(b_exp))]
+        # assert (np.array_equal(b, b_exp)), f"Expected {[int(x) for x in (b_exp)]} but got {b}"    
 
 
 
@@ -207,7 +212,7 @@ def is_runner():
     run_test_args = []
     runner.test(
         hdl_toplevel="b_adder",
-        test_module="b_adder",
+        test_module="test_b_adder",
         test_args=run_test_args,
         waves = True
     )
