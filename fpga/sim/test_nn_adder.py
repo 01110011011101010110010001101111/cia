@@ -20,8 +20,8 @@ nn_output = 10
 nn_range = 2**2
 
 # s = [np.random.randint(0, 2, N) for _ in range(k)]
-A = [np.random.randint(0, q, N) for _ in range(k+1)]
-nn = [np.random.randint(-nn_range, nn_range, nn_output) for _ in range(N)]
+A = np.array([np.random.randint(0, q, k+1) for _ in range(N)])
+nn = np.array([np.random.randint(-nn_range, nn_range, N) for _ in range(nn_output)])
 
 # b = [0 for _ in range(N)]
 # e = [np.random.randint(0, 4) for _ in range(N)]
@@ -29,7 +29,7 @@ nn = [np.random.randint(-nn_range, nn_range, nn_output) for _ in range(N)]
 # fun pumpkin great appetite thanksgiving (FPGA thanksgiving)
 
 
-def polynomial_mult(s0, s1, size=N, base=q):
+''' def polynomial_mult(s0, s1, size=N, base=q):
     result = [0] * (size)
 
     # Multiply the coefficients
@@ -41,7 +41,7 @@ def polynomial_mult(s0, s1, size=N, base=q):
     for i in range(len(result)):
         result[i] = result[i] % base
 
-    return result
+    return result '''
 
 def reverse_bits(n, bit_length=32):
     reversed_num = 0
@@ -64,31 +64,33 @@ def bit_slice(number, start, end):
     return shifted & mask
 
 '''
-module b_adder 
-    #(parameter DEPTH=784, parameter ADD = 1)
+module nn_adder
+    #(parameter K_VAL=501,
+    parameter DEPTH = 100, parameter OUT_NODES = 10)
     (input wire clk_in,
                     input wire rst_in,
-                    input wire poly_valid,
-                    input wire [41:0] poly_in,
-                    input wire [9:0] poly_idx,
-                    output logic poly_ready,
-                    input wire e_valid,
-                    input wire [23:0] e_in,
-                    input wire [9:0] e_idx,
-                    output logic e_ready,
-                    input wire b_valid,
-                    input wire b_in[23:0],
-                    output logic b_ready,
+                    input wire pk_valid,
+                    input wire [9:0] idx_k_in,
+                    input wire [9:0] idx_N_in,
+                    input wire [35:0] ct_in,
+                    output logic ct_ready,
+                    input wire weights_valid,
+                    input wire [2:0] weights_in,
+                    input wire [5:0] weight_idx, // 0-10
+                    output logic weights_ready,
+
                     input wire sum_ready,
                     output logic sum_valid,
-                    output logic sum[23:0],
-                    output logic sum_idx[9:0]
+                    output logic [35:0] sum_out,
+                    output logic [9:0] sum_idx_k,
+                    output logic [9:0] sum_idx_N,
+                    output logic [5:0] sum_idx_w
               );
 '''
 
 @cocotb.test()
 async def test_small(dut, N=N, k=k):
-    nn_result = [np.random.randint(0, q, nn_output) for _ in range(k+1)]
+    nn_result = [np.random.randint(0, q, k+1) for _ in range(nn_output)]
 
     """Cocotb test, checks if inputs are as expected, will output be as expected"""
     dut._log.info("Starting...")
@@ -101,101 +103,51 @@ async def test_small(dut, N=N, k=k):
     dut.rst_in.value = 0
     await ClockCycles(dut.clk_in,5, rising=False)
     
-    for h in range(k):
+    for h in range(N):
         # print(h)
-        for i in range(0, N, 2):
-            # await RisingEdge(dut.A_ready)
-            # await ClockCycles(dut.clk_in, 1, rising = False)
-            '''dut.poly_valid.value = 1
-            dut.B_ready.value = 1
-            dut.pk_A.value = int(make_num(A[h][i:i+4], 6))
-            dut.A_idx.value = i'''
-            # await ClockCycles(dut.clk_in, 1, rising = False)
-            # breakpoint()
-            # dut.A_valid.value = 0
+        for i in range(0, k+2, 2):
+            # load ct into it
+            if i == k:
+                dut.ct_in.value = int(make_num([A[h, i], 0], 18))
+            else:
+                dut.ct_in.value = int(make_num(A[h, i:i+2], 18))
 
-            for j in range(0, N, 2):
-                dut.poly_valid.value = 1
+            dut.idx_k_in.value = i
+            dut.idx_N_in.value = h
 
-                # breakpoint()
-                dut.poly_in.value = int(make_num(polynomial_mult(A[h][i:i+2], s[h][j:j+2], size=3), 18))
-                dut.poly_idx.value = i+j
+            dut.ct_valid.value = 1
 
-                if (i + j + 2 <= N):
-                    dut.e_valid.value = 1
-                    dut.e_idx.value = i+j
-                    if h == 0 and i == 0:
-                        # breakpoint()
-                        print("j is ", j, " e is ", e[j:j+2])
-                        dut.e_in.value = int(make_num(e[j:j+2], 18))
-                    else:
-                        dut.e_in.value = 0
+            await ClockCycles(dut.clk_in, 1, rising=False)
 
-                    dut.b_valid.value = 1
-                    dut.b_in.value = int(make_num(b[j+i: j+i+2], 18))
-                else:
-                    pass
+            dut.ct_valid.value = 0
+            
+            for j in range(nn_output):
+                dut.weights_in.value = int(make_num([nn[j][h]], 3))
+                dut.weights_valid = 1
+                dut.weights_idx = j
 
-                # breakpoint()
-                await ClockCycles(dut.clk_in, 1, rising = False)
+                await ClockCycles(dut.clk_in, 1, rising=False)
 
-                dut.b_valid.value = 0
-                dut.e_valid.value = 0
-                dut.poly_valid.value = 0
+                dut.weights_valid.value = 0
 
                 if dut.sum_valid.value:
-                    index_sum = dut.sum_idx.value
-                    value_sum = dut.sum.value
-                    print("===================")
-                    print("A", A[h][i:i+2], "S ", s[h][j:j+2])
-                    print(polynomial_mult(A[h][i:i+2], s[h][j:j+2], size=3))
-                    # print(index_sum)
+                    sum_out = dut.sum_out.value
+                    nn_result[j][i] = bit_slice(sum_out, 0, 17)
+                    if i < k:
+                        nn_result[j][i+1] = bit_slice(sum_out, 18, 35)
 
-                    for l in range(2):
-                        #print("Correct number: ", something[l])
-                        '''print("===================")
-                        
-                        print("poly ", dut.poly_in.value)
-                        print("e ", dut.e_in.value)
-                        print("b ", dut.b_in.value)'''
-                        if (index_sum+l < len(b)):
-                            print("index sum ", index_sum)
-                            print(i+j+l)
-                            print(index_sum, l, bit_slice(value_sum, l*18, l*18+17))
-                            b[index_sum+l] = bit_slice(value_sum, l*18, l*18+17)
-                            b[index_sum+l] %= q
-                else:
-                    index_sum = dut.sum_idx.value
-                    value_sum = 0
+    breakpoint()
+    output = np.dot(nn, A)
+    print(output)
+    print(nn_result)
 
-                print("===================")
-
-                # breakpoint()
-                await ClockCycles(dut.clk_in, 1, rising = False)
-
-                # something = [int(x) for x in (polynomial_mult(A[h][i:i+2], s[h][j:j+2]))
-
-            print("I is ", i, " H is ", h)
-            print(polynomial_mult(A[h][i:i+2], s[h]))
-            # MAKE THIS EXP BETTER INCLUDE LATER B_exp
-            b_exp = [b_exp[r] for r in range(i)]+[(polynomial_mult(A[h][i:i+2], s[h])[r-i] + b_exp[r])%q for r in range(i, len(b_exp))]
-            assert (np.array_equal(b, b_exp)), f"Expected {[int(x) for x in (b_exp)]} but got {b}" 
-
-        print(h)
-        # breakpoint()
-        print("All A: ", A[h])
-        print("all s: ", s[h])
-        print("all e: ", e)
-        print(polynomial_mult(A[h], s[h]))
-       # breakpoint(q
-        # b_exp = [(polynomial_mult(A[h], s[h])[i] + b_exp[i])%q for i in range(len(b_exp))]
-        # assert (np.array_equal(b, b_exp)), f"Expected {[int(x) for x in (b_exp)]} but got {b}"    
+             
 
 
 
 
 def is_runner():
-    """public private mult tester."""
+    """nn mult tester."""
     hdl_toplevel_lang = os.getenv("HDL_TOPLEVEL_LANG", "verilog")
     sim = os.getenv("SIM", "icarus")
     proj_path = Path(__file__).resolve().parent.parent
@@ -203,7 +155,7 @@ def is_runner():
     sources = [proj_path / "hdl" / "nn_adder.sv"]
     # sources += [proj_path / "hdl" / "xilinx_true_dual_port_read_first_1_clock_ram.v"]
     build_test_args = ["-Wall"]
-    parameters = {"DEPTH": N, FIX LATER}
+    parameters = {"DEPTH": N, "K_VAL": k+1, "OUT_NODES": nn_output}
     sys.path.append(str(proj_path / "sim"))
     runner = get_runner(sim)
     runner.build(

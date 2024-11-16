@@ -1,18 +1,16 @@
-// TODO LATER?? Add previous memory value too
-
 module nn_adder
     #(parameter K_VAL=501,
     parameter DEPTH = 100, parameter OUT_NODES = 10)
     (input wire clk_in,
                     input wire rst_in,
-                    input wire pk_valid,
+                    input wire ct_valid,
                     input wire [9:0] idx_k_in,
                     input wire [9:0] idx_N_in,
                     input wire [35:0] ct_in,
                     output logic ct_ready,
                     input wire weights_valid,
                     input wire [2:0] weights_in,
-                    input wire [5:0] weight_idx, // 0-10
+                    input wire [5:0] weights_idx, // 0-10
                     output logic weights_ready,
 
                     input wire sum_ready,
@@ -24,11 +22,13 @@ module nn_adder
               );
 
 /*
-If ADD = 0, will subtract poly from b
+// TODO LATER?? Add previous memory value too
+
+// veriLOGs
 */
     
     logic [35:0] ct_buffer;
-    logic ct_buff_valid,
+    logic ct_buff_valid;
     logic [9:0] ct_idx_buff_k;
     logic [9:0] ct_idx_buff_N;
 
@@ -79,10 +79,10 @@ If ADD = 0, will subtract poly from b
                         sum_idx_N <= ct_idx_buff_N;
                         sum_idx_w <= weights_idx;
 
-                        sum[17:0] <= $signed(ct_buffer[17:0]) * $signed(weights_in)
-                        sum[35:18] <= $signed(ct_buffer[35:18]) * $signed(weights_in)
+                        sum_out[17:0] <= $signed(ct_buffer[17:0]) * $signed(weights_in);
+                        sum_out[35:18] <= $signed(ct_buffer[35:18]) * $signed(weights_in);
 
-                        if(weight_idx == OUT_NODES - 1) begin
+                        if(weights_idx == OUT_NODES - 1) begin
                             ct_buff_valid <= 0;
                         end else begin
                         end
@@ -91,7 +91,7 @@ If ADD = 0, will subtract poly from b
                         // nothing waiting for all valid
                         ct_ready <= 0;
                         weights_ready <= 0;
-                        sum_valid <= 0
+                        sum_valid <= 0;
                     end
                 end
                 
