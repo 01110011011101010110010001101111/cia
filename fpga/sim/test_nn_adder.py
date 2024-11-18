@@ -90,7 +90,8 @@ module nn_adder
 
 @cocotb.test()
 async def test_small(dut, N=N, k=k):
-    nn_result = [np.random.randint(0, q, k+1) for _ in range(nn_output)]
+    nn_result = [np.zeros(k+1) for _ in range(nn_output)]
+    nn_result = [list(l) for l in nn_result]
 
     """Cocotb test, checks if inputs are as expected, will output be as expected"""
     dut._log.info("Starting...")
@@ -121,10 +122,12 @@ async def test_small(dut, N=N, k=k):
 
             dut.ct_valid.value = 0
             
+            await ClockCycles(dut.clk_in, 1, rising=False)
+            
             for j in range(nn_output):
                 dut.weights_in.value = int(make_num([nn[j][h]], 3))
-                dut.weights_valid = 1
-                dut.weights_idx = j
+                dut.weights_valid.value = 1
+                dut.weights_idx.value = j
 
                 await ClockCycles(dut.clk_in, 1, rising=False)
 
@@ -132,14 +135,24 @@ async def test_small(dut, N=N, k=k):
 
                 if dut.sum_valid.value:
                     sum_out = dut.sum_out.value
-                    nn_result[j][i] = bit_slice(sum_out, 0, 17)
+                    nn_result[j][i] += bit_slice(sum_out, 0, 17)
+                    nn_result[j][i] %= q
                     if i < k:
-                        nn_result[j][i+1] = bit_slice(sum_out, 18, 35)
+                        nn_result[j][i+1] += bit_slice(sum_out, 18, 35)
+                        nn_result[j][i+1] %= q
 
-    breakpoint()
-    output = np.dot(nn, A)
+        # breakpoint()
+        # output = np.dot(nn[:, 0:h+1].reshape(-1, 1), np.array(A[0:h+1, :]))%q
+        # print(output)
+        # print(nn_result)
+        # assert np.array_equal(output, nn_result), "Uh oh 1"
+
+    # breakpoint()
+    output = np.dot(nn, A)%q
     print(output)
     print(nn_result)
+    print(np.array_equal(output, nn_result))
+    assert np.array_equal(output, nn_result) == True, "Uh oh"
 
              
 

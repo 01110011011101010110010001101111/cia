@@ -57,8 +57,13 @@ If ADD = 0, will subtract poly from b
                     sum_idx <= poly_idx;
                     poly_top <= (poly_idx < DEPTH - 2)?poly_in[53:36]:0;
 
-                    sum[17:0] <= poly_top[17:0] + poly_in[17:0] + b_in[17:0] + e_in[17:0];
-                    sum[35:18] <= poly_in[35:18] + b_in[35:18] + e_in[35:18];
+                    if (ADD == 1) begin
+                        sum[17:0] <= poly_top[17:0] + poly_in[17:0] + b_in[17:0] + e_in[17:0];
+                        sum[35:18] <= poly_in[35:18] + b_in[35:18] + e_in[35:18];
+                    end else begin
+                        sum[17:0] <= - poly_top[17:0] - poly_in[17:0] + b_in[17:0];
+                        sum[35:18] <= - poly_in[35:18] + b_in[35:18];
+                    end
                     
                     //sum[5:0] <= poly_top[5:0] + poly[5:0] + b_in[5:0] + e_in[5:0];
                     //sum[11:6] <= poly_top[11:6] + poly[11:6] + b_in[11:6] + e_in[11:6];
