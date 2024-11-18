@@ -39,7 +39,7 @@ module nn_adder
 
     always_ff @(posedge clk_in) begin
         if (rst_in) begin
-            ct_ready <= 0;
+            ct_ready <= 1;
             weights_ready <= 0;
             ct_buff_valid <= 0;
             sum_valid <= 0;
@@ -53,11 +53,11 @@ module nn_adder
             end else begin
                 // get weights >> iterate over A in that row
                 if(~ct_buff_valid) begin
-                    if(ct_valid) begin
-                        ct_ready <= 1;
+                    if(ct_valid && ct_ready) begin
+                        ct_ready <= 0;
                         ct_buff_valid <= 1;
                         ct_buffer <= ct_in;
-                        weights_ready <= 0;
+                        weights_ready <= 1;
                         ct_idx_buff_k <= idx_k_in;
                         ct_idx_buff_N <= idx_N_in;
                     end else begin
@@ -68,9 +68,9 @@ module nn_adder
                     end
                 end else begin
                     // input handshake happens
-                    if (weights_valid) begin
+                    if (weights_valid && weights_ready) begin
                         // ready handshake
-                        weights_ready <= 1;
+                        // weights_ready <= 1;
                         ct_ready <= 0;
                         
                         // set sum to valid and store sum
@@ -84,13 +84,15 @@ module nn_adder
 
                         if(weights_idx == OUT_NODES - 1) begin
                             ct_buff_valid <= 0;
+                            ct_ready <= 1;
+                            weights_ready <= 0;
                         end else begin
                         end
                         
                     end else begin
                         // nothing waiting for all valid
                         ct_ready <= 0;
-                        weights_ready <= 0;
+                        weights_ready <= 1;
                         sum_valid <= 0;
                     end
                 end
