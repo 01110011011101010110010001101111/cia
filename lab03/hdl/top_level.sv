@@ -22,8 +22,9 @@ module top_level
    assign sys_rst = btn[0];
 
    // these don't need to be 8-bit but uhhhh yes
-   logic [7:0] q = 64;
-   logic [7:0] p = 16;
+   // each is 1 << q or 1 << p
+   logic [7:0] q = 18;
+   logic [7:0] p = 10;
 
    // Checkoff 1: Microphone->SPI->UART->Computer
 
@@ -152,8 +153,8 @@ module top_level
  
     // 8+8+4 = 20 max (can technically do a tighter bound but so be it)
     logic [20:0] total_count;
-    localparam BRAM_1_SIZE = 40; // MUST CHANGE
-    localparam BRAM_2_SIZE = 40; // MUST CHANGE
+    localparam BRAM_1_SIZE = 4; // MUST CHANGE
+    localparam BRAM_2_SIZE = 4; // MUST CHANGE
  
  
     // BRAM Memory
@@ -188,7 +189,7 @@ module top_level
          .addrb(addrb),
          .dinb(dinb),
          .clkb(clk_100mhz),
-         .web(1'b1), // write always
+         .web(addrb < BRAM_1_SIZE), // write ONLY IF WITHIN THE SIZE
          .enb(1'b1),
          .rstb(sys_rst),
          .regceb(1'b1),
@@ -216,7 +217,7 @@ module top_level
        .RAM_DEPTH(PT_BRAM_DEPTH)) pt_bram
        (
         // PORT A
-        .addra(0), // total_count < BRAM_1_SIZE + BRAM_2_SIZE ? total_count - BRAM_1_SIZE : BRAM_2_SIZE),
+        .addra(total_count < BRAM_1_SIZE + BRAM_2_SIZE ? total_count - BRAM_1_SIZE : BRAM_2_SIZE),
         .dina(0), // we only use port A for reads!
         .clka(clk_100mhz),
         .wea(1'b0), // read only
@@ -225,10 +226,10 @@ module top_level
         .regcea(1'b1),
         .douta(douta_pt),
         // PORT B
-        .addrb(addrb_pt),
+        .addrb(addrb - BRAM_1_SIZE),
         .dinb(dinb_pt),
         .clkb(clk_100mhz),
-        .web(1'b1), // write always
+        .web(addrb < BRAM_1_SIZE + BRAM_2_SIZE), // write always
         .enb(1'b1),
         .rstb(sys_rst),
         .regceb(1'b1),
@@ -277,7 +278,7 @@ module top_level
     // Memory addressing
     // TODO: instantiate an event counter that increments once every 8000th of a second
     // for addressing the (port A) data we want to send out to LINE OUT!
-    evt_counter #(.MAX_COUNT(BRAM_1_SIZE)) port_a_counter(
+    evt_counter #(.MAX_COUNT(BRAM_1_SIZE + BRAM_2_SIZE)) port_a_counter(
          .clk_in(clk_100mhz),
          .rst_in(sys_rst),
          .evt_in(btn[1]),
@@ -287,7 +288,7 @@ module top_level
  
     // TODO: instantiate another event counter that increments with each new UART data byte
     // for addressing the (port B) place to send our UART_RX data!
-    evt_counter #(.MAX_COUNT(BRAM_DEPTH)) port_b_counter(
+    evt_counter #(.MAX_COUNT(BRAM_1_SIZE + BRAM_2_SIZE)) port_b_counter(
          .clk_in(clk_100mhz),
          .rst_in(sys_rst),
          .evt_in(new_data_out),
