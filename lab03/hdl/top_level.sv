@@ -1,19 +1,16 @@
 `default_nettype none // prevents system from inferring an undeclared logic (good practice)
 
 module top_level
-  (
+(
    input wire          clk_100mhz, //100 MHz onboard clock
    input wire [15:0]   sw, //all 16 input slide switches
    input wire [3:0]    btn, //all four momentary button switches
    output logic [15:0] led, //16 green output LEDs (located right above switches)
    output logic [2:0]  rgb0, //RGB channels of RGB LED0
    output logic [2:0]  rgb1, //RGB channels of RGB LED1
-   output logic        spkl, spkr, // left and right channels of line out port
-   // input wire          cipo, // SPI controller-in peripheral-out
-   // output logic        copi, dclk, cs, // SPI controller output signals
-	 input wire 				 uart_rxd, // UART computer-FPGA
-	 output logic 			 uart_txd // UART FPGA-computer
-   );
+   input wire 				 uart_rxd, // UART computer-FPGA
+   output logic 			 uart_txd // UART FPGA-computer
+);
 
    //shut up those rgb LEDs for now (active high):
    assign rgb1 = 0; //set to 0.
@@ -30,47 +27,23 @@ module top_level
 
    // Checkoff 1: Microphone->SPI->UART->Computer
 
-//    assign spkl = 0;
-//    assign spkr = 0;
-//    assign copi = 0;
-//    assign dclk = 0;
-//    assign cs = 0;
-//    assign uart_txd = 0;
-
     // 8kHz trigger using a week 1 counter!
 
     // TODO: set this parameter to the number of clock cycles between each cycle of an 8kHz trigger
     localparam CYCLES_PER_TRIGGER = 12500; // MUST CHANGE
  
-    logic [31:0]        trigger_count;
-    logic               spi_trigger;
+    // logic [31:0]        trigger_count;
+    // logic               spi_trigger;
  
+ /*
     counter counter_8khz_trigger
       (.clk_in(clk_100mhz),
        .rst_in(sys_rst),
        .period_in(CYCLES_PER_TRIGGER),
        .count_out(trigger_count));
- 
-    // SPI Controller on our ADC
- 
-//     //built last week:
-//     spi_con
-//    #(   .DATA_WIDTH(ADC_DATA_WIDTH),
-//         .DATA_CLK_PERIOD(ADC_DATA_CLK_PERIOD)
-//     )my_spi_con
-//     ( .clk_in(clk_100mhz),
-//       .rst_in(sys_rst),
-//       .data_in(spi_write_data),
-//       .trigger_in(spi_trigger),
-//       .data_out(spi_read_data),
-//       .data_valid_out(spi_read_data_valid), //high when output data is present.
-//       .chip_data_out(copi), //(serial dout preferably)
-//       .chip_data_in(cipo), //(serial din preferably)
-//       .chip_clk_out(dclk),
-//       .chip_sel_out(cs)
-//      );
- 
- 
+ */
+
+/*
     // Line out Audio
     logic [7:0]                line_out_audio;
  
@@ -84,15 +57,7 @@ module top_level
                .rst_in(sys_rst),
                .dc_in(douta),
                .sig_out(spk_out));
- 
- 
- 
- 
-    // set both output channels equal to the same PWM signal!
-    assign spkl = spk_out;
-    assign spkr = spk_out;
- 
- 
+*/
  
     // Data Buffer SPI-UART
     // TODO: write some sequential logic to keep track of whether the
@@ -100,29 +65,11 @@ module top_level
     //  and to set the uart_transmit inputs appropriately.
     //  **be sure to only ever set uart_data_valid high if sw[0] is on,
     //  so we only send data on UART when we're trying to receive it!
-    logic                      audio_sample_waiting = 0;
+    // logic                      audio_sample_waiting = 0;
  
     logic [7:0]                uart_data_in;
     logic                      uart_data_valid;
     logic                      uart_busy;
- 
- 
- 
-    // UART Transmitter to FTDI2232
-    // TODO: instantiate the UART transmitter you just wrote, using the input signals from above.
- 
-    uart_transmit
-    #(   .INPUT_CLOCK_FREQ(100_000_000), // 100 MHz
-        .BAUD_RATE(115_200)
-    )my_uart_transmit
-    ( .clk_in(clk_100mhz),
-      .rst_in(sys_rst),
-      .data_byte_in(douta),
-      .trigger_in(new_data_out_buf),
-      .busy_out(uart_busy),
-      .tx_wire_out(uart_txd)
-     );
- 
  
     // Checkoff 2: leave this stuff commented until you reach the second checkoff page!
     // Synchronizer
@@ -148,6 +95,23 @@ module top_level
       .new_data_out(new_data_out),
       .data_byte_out(dinb)
      );
+
+ 
+    // UART Transmitter to FTDI2232
+    // TODO: instantiate the UART transmitter you just wrote, using the input signals from above.
+ 
+    uart_transmit
+    #(   .INPUT_CLOCK_FREQ(100_000_000), // 100 MHz
+        .BAUD_RATE(115_200)
+    )my_uart_transmit
+    ( .clk_in(clk_100mhz),
+      .rst_in(sys_rst),
+      .data_byte_in(douta),
+      .trigger_in(new_data_out),
+      .busy_out(uart_busy),
+      .tx_wire_out(uart_txd)
+    );
+ 
  
  
    always_ff @(posedge clk_100mhz)begin
@@ -228,7 +192,7 @@ module top_level
          .regceb(1'b1),
          .doutb() // we only use port B for writes!
          );
- 
+
 
    // BRAM Memory
    // We've configured this for you, but you'll need to hook up your address and data ports to the rest of your logic!
