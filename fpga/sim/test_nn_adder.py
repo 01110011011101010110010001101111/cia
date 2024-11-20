@@ -90,8 +90,7 @@ module nn_adder
 
 @cocotb.test()
 async def test_small(dut, N=N, k=k):
-    nn_result = [np.zeros(k+1) for _ in range(nn_output)]
-    nn_result = [list(l) for l in nn_result]
+    nn_result = np.array([np.zeros(k+1) for _ in range(nn_output)]).astype(int)
 
     """Cocotb test, checks if inputs are as expected, will output be as expected"""
     dut._log.info("Starting...")
@@ -121,7 +120,7 @@ async def test_small(dut, N=N, k=k):
             await ClockCycles(dut.clk_in, 1, rising=False)
 
             dut.ct_valid.value = 0
-            
+
             await ClockCycles(dut.clk_in, 1, rising=False)
             
             for j in range(nn_output):
@@ -129,23 +128,38 @@ async def test_small(dut, N=N, k=k):
                 dut.weights_valid.value = 1
                 dut.weights_idx.value = j
 
-                await ClockCycles(dut.clk_in, 1, rising=False)
+                # breakpoint()
+                if i == k:
+                    dut.mem_in.value = int(make_num([nn_result[j, i], 0], 18))
+                else:
+                    dut.mem_in.value = int(make_num(nn_result[j, i:i+2], 18))
+
+                dut.mem_valid.value = 1
+
+
+                if j == 0:
+                    await ClockCycles(dut.clk_in, 2, rising=False)
+                else:
+                    await ClockCycles(dut.clk_in, 1, rising=False)
 
                 dut.weights_valid.value = 0
+                dut.mem_valid.value = 0
+
+                # breakpoint()
 
                 if dut.sum_valid.value:
                     sum_out = dut.sum_out.value
-                    nn_result[j][i] += bit_slice(sum_out, 0, 17)
-                    nn_result[j][i] %= q
+                    nn_result[j][i] = bit_slice(sum_out, 0, 17)
+                    # nn_result[j][i] %= q
                     if i < k:
-                        nn_result[j][i+1] += bit_slice(sum_out, 18, 35)
-                        nn_result[j][i+1] %= q
+                        nn_result[j][i+1] = bit_slice(sum_out, 18, 35)
+                        # nn_result[j][i+1] %= q
 
         # breakpoint()
-        # output = np.dot(nn[:, 0:h+1].reshape(-1, 1), np.array(A[0:h+1, :]))%q
-        # print(output)
-        # print(nn_result)
-        # assert np.array_equal(output, nn_result), "Uh oh 1"
+        output = np.dot(nn[:, 0:h+1], np.array(A[0:h+1, :]))%q
+        print(output)
+        print(nn_result)
+        assert np.array_equal(output, nn_result), f"Uh oh 1 {np.where(output != nn_result)}"
 
     # breakpoint()
     output = np.dot(nn, A)%q
