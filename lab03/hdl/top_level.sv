@@ -100,6 +100,9 @@ module top_level
     // UART Transmitter to FTDI2232
     // TODO: instantiate the UART transmitter you just wrote, using the input signals from above.
  
+    logic trig_trans = 0;
+    logic inc_trans = 0;
+
     uart_transmit
     #(   .INPUT_CLOCK_FREQ(100_000_000), // 100 MHz
         .BAUD_RATE(115_200)
@@ -107,13 +110,12 @@ module top_level
     ( .clk_in(clk_100mhz),
       .rst_in(sys_rst),
       .data_byte_in(douta),
-      .trigger_in(new_data_out),
+      .trigger_in(btn[2]),
       .busy_out(uart_busy),
       .tx_wire_out(uart_txd)
     );
  
- 
- 
+
    always_ff @(posedge clk_100mhz)begin
      // // CHECKOFF 1
      // // if SPI output data is there
@@ -167,7 +169,7 @@ module top_level
  
     // only using port b for writes: we only use din
     logic [BRAM_WIDTH-1:0]     dinb;
-    logic [ADDR_WIDTH-1:0]     addrb;
+    logic [ADDR_WIDTH-1:0]     addrb = 0;
  
     xilinx_true_dual_port_read_first_2_clock_ram
       #(.RAM_WIDTH(BRAM_WIDTH),
@@ -278,7 +280,7 @@ module top_level
     evt_counter #(.MAX_COUNT(BRAM_1_SIZE)) port_a_counter(
          .clk_in(clk_100mhz),
          .rst_in(sys_rst),
-         .evt_in(new_data_out_buf),
+         .evt_in(btn[1]),
          .count_out(total_count));
  
  
