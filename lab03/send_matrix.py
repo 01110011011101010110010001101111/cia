@@ -37,5 +37,6 @@ if __name__ == "__main__":
     # You can modify this part to accept a matrix in a different way
     # For now, let's assume the matrix is hardcoded for demonstration
     matrix = np.array([[1, 128, 255], [64, 192, 32]], dtype=np.uint8)  # Example matrix
+    # matrix = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]], dtype=np.uint8)  # Example matrix
     send_matrix(matrix)
 
