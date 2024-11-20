@@ -82,7 +82,9 @@ module top_level
     // declare any signals you need to keep track of!
  
     logic [7:0] data_byte_out;
+    logic [7:0] data_byte_out_buf;
     logic new_data_out;
+    logic new_data_out_3;
     logic new_data_out_buf;
  
     uart_receive
@@ -93,10 +95,20 @@ module top_level
       .rst_in(sys_rst),
       .rx_wire_in(uart_rx_buf1),
       .new_data_out(new_data_out),
-      .data_byte_out(dinb)
+      .data_byte_out(data_byte_out)
      );
 
  
+    pipeline #(
+      .BITS(1),
+      .STAGES(4)
+    )new_data_out_pipeline (
+        .clk_in(clk_100mhz),
+        .rst_in(sys_rst),
+        .data_in(new_data_out),
+        .data_out(new_data_out_3)
+    );
+
     // UART Transmitter to FTDI2232
     // TODO: instantiate the UART transmitter you just wrote, using the input signals from above.
  
@@ -107,7 +119,7 @@ module top_level
     ( .clk_in(clk_100mhz),
       .rst_in(sys_rst),
       .data_byte_in(douta),
-      .trigger_in(new_data_out),
+      .trigger_in(new_data_out_3),
       .busy_out(uart_busy),
       .tx_wire_out(uart_txd)
     );
@@ -145,6 +157,7 @@ module top_level
      uart_rx_buf0 <= uart_rxd;
      uart_rx_buf1 <= uart_rx_buf0;
      new_data_out_buf <= new_data_out;
+     data_byte_out_buf <= data_byte_out;
    end
  
  
@@ -184,9 +197,9 @@ module top_level
          .douta(douta),
          // PORT B
          .addrb(addrb),
-         .dinb(dinb),
+         .dinb(data_byte_out_buf),
          .clkb(clk_100mhz),
-         .web(1'b1), // write always
+         .web(new_data_out_buf), // write always
          .enb(1'b1),
          .rstb(sys_rst),
          .regceb(1'b1),
