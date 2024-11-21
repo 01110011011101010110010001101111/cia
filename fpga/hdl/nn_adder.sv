@@ -6,19 +6,19 @@ module nn_adder
                     input wire ct_valid,
                     input wire [9:0] idx_k_in,
                     input wire [9:0] idx_N_in,
-                    input wire [35:0] ct_in,
+                    input wire [31:0] ct_in,
                     output logic ct_ready,
                     input wire weights_valid,
                     input wire [2:0] weights_in,
                     input wire [5:0] weights_idx, // 0-10
                     output logic weights_ready,
                     input wire mem_valid,
-                    input [35:0] mem_in,
+                    input [31:0] mem_in,
                     output logic mem_ready,
 
                     input wire sum_ready,
                     output logic sum_valid,
-                    output logic [35:0] sum_out,
+                    output logic [31:0] sum_out,
                     output logic [9:0] sum_idx_k,
                     output logic [9:0] sum_idx_N,
                     output logic [5:0] sum_idx_w
@@ -84,8 +84,8 @@ module nn_adder
                             sum_idx_N <= ct_idx_buff_N;
                             sum_idx_w <= weights_idx;
 
-                            sum_out[17:0] <= $signed(ct_buffer[17:0]) * $signed(weights_in) + $signed(mem_in[17:0]);
-                            sum_out[35:18] <= $signed(ct_buffer[35:18]) * $signed(weights_in) + $signed(mem_in[35:18]);
+                            sum_out[15:0] <= $signed(ct_buffer[15:0]) * $signed(weights_in) + $signed(mem_in[15:0]);
+                            sum_out[31:16] <= $signed(ct_buffer[31:16]) * $signed(weights_in) + $signed(mem_in[31:16]);
 
                             if(weights_idx == OUT_NODES - 1) begin
                                 ct_buff_valid <= 0;

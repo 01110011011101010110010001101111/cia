@@ -13,7 +13,9 @@ module public_private_mm
                     output logic [9:0] idx_B,
                     output logic [53:0] B_out,
                     input wire B_ready,
-                    output logic B_valid
+                    output logic B_valid,
+                    input logic [9:0] h_in,
+                    output logic [9:0] h_out
               );
 
     
@@ -30,6 +32,7 @@ module public_private_mm
 
     logic[9:0] A_idx_stored;
     logic [9:0] s_idx_stored;
+    logic [9:0] h_idx_stored;
  
     logic [2:0] state;
     /*
@@ -55,16 +58,19 @@ module public_private_mm
                         s_sk <= sk_s;
                         s_idx_stored <= s_idx;
                         state <= 3'b011;
+                        h_idx_stored <= h_id;
                     end else if (A_ready && A_valid) begin
                         A_ready <= 0;
                         A_pk <= pk_A;
                         A_idx_stored <= A_idx;
                         state <= 3'b001;
+                        h_idx_stored <= h_id;
                     end else if (s_ready && s_valid) begin
                         s_ready <= 0;
                         s_sk <= sk_s;
                         s_idx_stored <= s_idx;
                         state <= 3'b010;
+                        h_idx_stored <= h_id;
                     end else begin
                         A_ready <= 1;
                         s_ready <= 1;
@@ -77,6 +83,7 @@ module public_private_mm
                         s_sk <= sk_s;
                         s_idx_stored <= s_idx;
                         state <= 3'b011;
+                        h_idx_stored <= h_id;
                     end else begin
                     end
                 end
@@ -88,10 +95,12 @@ module public_private_mm
                         A_pk <= pk_A;
                         A_idx_stored <= A_idx;
                         state <= 3'b011;
+                        h_idx_stored <= h_id;
                      end else begin
                      end
                 end
                 3'b011 : begin
+                    h_out <= h_idx_stored;
                     idx_B <= s_idx_stored + A_idx_stored;
 
                     B_out[17:0] <= (s_sk[0] ? A_pk[17:0] : 18'b0);
