@@ -118,33 +118,6 @@ module top_level
  
 
    always_ff @(posedge clk_100mhz)begin
-     // // CHECKOFF 1
-     // // if SPI output data is there
-     // audio_sample_waiting <= 1;
-     // // audio_sample <= 1;
-     // uart_data_in <= 0;
- 
-     // // if (spi_read_data_valid) begin 
-     // //     // wait is high
-     // //     audio_sample_waiting <= 1;
-     // // end else if (!uart_busy) begin
-     // //     // low when u_art_busy is low
-     // //     audio_sample_waiting <= 0;
-     // // end
-     // // if (spi_read_data_valid) begin
-     // //     // assign audio sample (for pwm)
-     // //     audio_sample <= spi_read_data[9:2];
-     // //     uart_data_in <= spi_read_data[9:2];
-     // // end 
-     // // if (sw[0] && spi_read_data_valid) begin
-     // //     uart_data_valid <= 1;
-     // // end else begin
-     // //     uart_data_valid <= 0;
-     // // end
- 
-     // // CHECKOFF 2
-     // // pass through
-     // uart_data_valid <= 1;
      uart_rx_buf0 <= uart_rxd;
      uart_rx_buf1 <= uart_rx_buf0;
      new_data_out_buf <= new_data_out;
@@ -153,15 +126,15 @@ module top_level
  
     // 8+8+4 = 20 max (can technically do a tighter bound but so be it)
     logic [20:0] total_count;
-    localparam BRAM_1_SIZE = 4; // MUST CHANGE
-    localparam BRAM_2_SIZE = 4; // MUST CHANGE
+    localparam BRAM_1_SIZE = 500_00; // MUST CHANGE
+    localparam BRAM_2_SIZE = 500_00; // MUST CHANGE
  
  
     // BRAM Memory
     // We've configured this for you, but you'll need to hook up your address and data ports to the rest of your logic!
  
-    parameter BRAM_WIDTH = 8;
-    parameter BRAM_DEPTH = 40_000; // 40_000 samples = 5 seconds of samples at 8kHz sample
+    parameter BRAM_WIDTH = 18;
+    parameter BRAM_DEPTH = 500_00; // 40_000 samples = 5 seconds of samples at 8kHz sample
     parameter ADDR_WIDTH = $clog2(BRAM_DEPTH);
  
     // only using port a for reads: we only use dout
@@ -200,8 +173,8 @@ module top_level
    // BRAM Memory
    // We've configured this for you, but you'll need to hook up your address and data ports to the rest of your logic!
 
-   parameter PT_BRAM_WIDTH = 4; // 1;
-   parameter PT_BRAM_DEPTH = 196; // 784; // 40_000 samples = 5 seconds of samples at 8kHz sample
+   parameter PT_BRAM_WIDTH = 1; // 1;
+   parameter PT_BRAM_DEPTH = 500_00; // 784; // 40_000 samples = 5 seconds of samples at 8kHz sample
    parameter PT_ADDR_WIDTH = $clog2(PT_BRAM_DEPTH);
 
    // only using port a for reads: we only use dout
