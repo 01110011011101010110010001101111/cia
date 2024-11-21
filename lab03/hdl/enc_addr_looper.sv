@@ -19,6 +19,8 @@ module enc_addr_looper
     logic [5:0] inner_A_idx;
     logic [6:0] outer_k_idx;
 
+    logic addr_valid_buffer;
+
     evt_counter #(.MAX_COUNT(DEPTH/2)) inner_s_loop(
          .clk_in(clk_in),
          .rst_in(begin_enc),
@@ -44,14 +46,15 @@ module enc_addr_looper
             e_addr <= 0;
             b_addr <= 0;
             addr_valid <= 0;
-        end else if (begin_enc) begin
-            addr_valid <= 1;
+            addr_valid_buffer <= 0;
         end else begin
-            A_addr <= outer_k_idx * DEPTH>>1 + inner_A_idx;
-            s_addr <= outer_k_idx * DEPTH>>1 + inner_s_idx;
+            addr_valid_buffer <= addr_valid_buffer?1:begin_enc;
+            addr_valid <= addr_valid_buffer;
+            A_addr <= (outer_k_idx * (DEPTH/2)) + inner_A_idx;
+            s_addr <= (outer_k_idx * (DEPTH/2)) + inner_s_idx;
             b_addr <= (inner_A_idx + inner_s_idx >= DEPTH>>1) ? 0: inner_A_idx + inner_s_idx;
             e_addr <= inner_s_idx;
-            e_zero <= inner_A_idx == 0 && outer_k_idx == 0;
+            e_zero <= ~(inner_A_idx == 0 && outer_k_idx == 0);
         end
     end
 
