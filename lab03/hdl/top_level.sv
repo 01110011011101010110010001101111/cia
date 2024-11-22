@@ -102,7 +102,7 @@ module top_level
     )my_uart_transmit
     ( .clk_in(clk_100mhz),
       .rst_in(sys_rst),
-      .data_byte_in(douta[23:16]),
+      .data_byte_in(douta_pt),
       .trigger_in(btn[2]),
       .busy_out(uart_busy),
       .tx_wire_out(uart_txd)
@@ -177,7 +177,7 @@ module top_level
          .addrb(addrb),
          .dinb(data_byte_out_buf),
          .clkb(clk_100mhz),
-         .web(new_data_out_buf), // write always
+         .web(new_data_out_buf && addrb < 1), // write always
          .enb(1'b1),
          .rstb(sys_rst),
          .regceb(1'b1),
@@ -188,7 +188,7 @@ module top_level
    // BRAM Memory
    // We've configured this for you, but you'll need to hook up your address and data ports to the rest of your logic!
 
-   parameter PT_BRAM_WIDTH = 4; // 1;
+   parameter PT_BRAM_WIDTH = 8; // 1;
    parameter PT_BRAM_DEPTH = 196; // 784; // 40_000 samples = 5 seconds of samples at 8kHz sample
    parameter PT_ADDR_WIDTH = $clog2(PT_BRAM_DEPTH);
 
@@ -203,26 +203,26 @@ module top_level
    xilinx_true_dual_port_read_first_2_clock_ram
      #(.RAM_WIDTH(PT_BRAM_WIDTH),
        .RAM_DEPTH(PT_BRAM_DEPTH)) pt_bram
-       (
-        // PORT A
-        .addra(0), // total_count < BRAM_1_SIZE + BRAM_2_SIZE ? total_count - BRAM_1_SIZE : BRAM_2_SIZE),
-        .dina(0), // we only use port A for reads!
-        .clka(clk_100mhz),
-        .wea(1'b0), // read only
-        .ena(1'b1),
-        .rsta(sys_rst),
-        .regcea(1'b1),
-        .douta(douta_pt),
-        // PORT B
-        .addrb(addrb_pt),
-        .dinb(dinb_pt),
-        .clkb(clk_100mhz),
-        .web(1'b1), // write always
-        .enb(1'b1),
-        .rstb(sys_rst),
-        .regceb(1'b1),
-        .doutb() // we only use port B for writes!
-        );
+        (
+         // PORT A
+         .addra(sw), // total_count < BRAM_1_SIZE ? total_count : BRAM_1_SIZE),
+         .dina(0), // we only use port A for reads!
+         .clka(clk_100mhz),
+         .wea(1'b0), // read only
+         .ena(1'b1),
+         .rsta(sys_rst),
+         .regcea(1'b1),
+         .douta(douta_pt),
+         // PORT B
+         .addrb(addrb),
+         .dinb(data_byte_out_buf),
+         .clkb(clk_100mhz),
+         .web(new_data_out_buf && addrb >= 1), // write always
+         .enb(1'b1),
+         .rstb(sys_rst),
+         .regceb(1'b1),
+         .doutb() // we only use port B for writes!
+         );
 
 //    parameter SK_BRAM_WIDTH = 4; //1;
 //    parameter SK_BRAM_DEPTH = 196_000; // 784_000; // 40_000 samples = 5 seconds of samples at 8kHz sample
