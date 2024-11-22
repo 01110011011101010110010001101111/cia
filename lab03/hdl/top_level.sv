@@ -119,41 +119,13 @@ module top_level
     ( .clk_in(clk_100mhz),
       .rst_in(sys_rst),
       .data_byte_in(douta),
-      .trigger_in(new_data_out_3),
+      .trigger_in(btn[2]),
       .busy_out(uart_busy),
       .tx_wire_out(uart_txd)
     );
  
- 
- 
    always_ff @(posedge clk_100mhz)begin
-     // // CHECKOFF 1
-     // // if SPI output data is there
-     // audio_sample_waiting <= 1;
-     // // audio_sample <= 1;
-     // uart_data_in <= 0;
- 
-     // // if (spi_read_data_valid) begin 
-     // //     // wait is high
-     // //     audio_sample_waiting <= 1;
-     // // end else if (!uart_busy) begin
-     // //     // low when u_art_busy is low
-     // //     audio_sample_waiting <= 0;
-     // // end
-     // // if (spi_read_data_valid) begin
-     // //     // assign audio sample (for pwm)
-     // //     audio_sample <= spi_read_data[9:2];
-     // //     uart_data_in <= spi_read_data[9:2];
-     // // end 
-     // // if (sw[0] && spi_read_data_valid) begin
-     // //     uart_data_valid <= 1;
-     // // end else begin
-     // //     uart_data_valid <= 0;
-     // // end
- 
-     // // CHECKOFF 2
-     // // pass through
-     // uart_data_valid <= 1;
+     // CHECKOFF 2
      uart_rx_buf0 <= uart_rxd;
      uart_rx_buf1 <= uart_rx_buf0;
      new_data_out_buf <= new_data_out;
@@ -187,7 +159,7 @@ module top_level
         .RAM_DEPTH(BRAM_DEPTH)) audio_bram
         (
          // PORT A
-         .addra(total_count < BRAM_1_SIZE ? total_count : BRAM_1_SIZE),
+         .addra({sw[3], sw[2], sw[1], sw[0]}), // total_count < BRAM_1_SIZE ? total_count : BRAM_1_SIZE),
          .dina(0), // we only use port A for reads!
          .clka(clk_100mhz),
          .wea(1'b0), // read only
