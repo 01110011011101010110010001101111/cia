@@ -32,34 +32,7 @@ module top_level
 
     // TODO: set this parameter to the number of clock cycles between each cycle of an 8kHz trigger
     localparam CYCLES_PER_TRIGGER = 12500; // MUST CHANGE
- 
-    // logic [31:0]        trigger_count;
-    // logic               spi_trigger;
- 
- /*
-    counter counter_8khz_trigger
-      (.clk_in(clk_100mhz),
-       .rst_in(sys_rst),
-       .period_in(CYCLES_PER_TRIGGER),
-       .count_out(trigger_count));
- */
 
-/*
-    // Line out Audio
-    logic [7:0]                line_out_audio;
- 
-    // for checkoff 1: pass-through the audio sample we captured from SPI!
-    // also, make the value much much smaller so that we don't kill our ears :)
-    assign line_out_audio = 1;
- 
-    logic                      spk_out;
-    // TODO: instantiate a pwm module to drive spk_out based on the
-    pwmnew mcr (.clk_in(clk_100mhz),
-               .rst_in(sys_rst),
-               .dc_in(douta),
-               .sig_out(spk_out));
-*/
- 
     // Data Buffer SPI-UART
     // TODO: write some sequential logic to keep track of whether the
     //  current audio_sample is waiting to be sent,
@@ -69,7 +42,6 @@ module top_level
     // logic                      audio_sample_waiting = 0;
  
     logic [7:0]                uart_data_in;
-    logic                      uart_data_valid;
     logic                      uart_busy;
  
     // Checkoff 2: leave this stuff commented until you reach the second checkoff page!
@@ -83,7 +55,9 @@ module top_level
     // declare any signals you need to keep track of!
  
     logic [7:0] data_byte_out;
+    logic [31:0] data_byte_out_buf;
     logic new_data_out;
+    logic new_data_out_3;
     logic new_data_out_buf;
  
     uart_receive
@@ -94,47 +68,69 @@ module top_level
       .rst_in(sys_rst),
       .rx_wire_in(uart_rx_buf1),
       .new_data_out(new_data_out),
-      .data_byte_out(dinb)
+      .data_byte_out(data_byte_out)
      );
 
- 
+     logic four_new_data_out;
+     logic [31:0] data_four_byte_out;
+
+    compress_4 compress_four
+    ( .clk_in(clk_100mhz),
+      .rst_in(sys_rst),
+      .valid_data_in(new_data_out),
+      .data_in(data_byte_out),
+      .valid_data_out(four_new_data_out),
+      .data_out(data_four_byte_out)
+     );
+
+    pipeline #(
+      .BITS(1),
+      .STAGES(4)
+    )new_data_out_pipeline (
+        .clk_in(clk_100mhz),
+        .rst_in(sys_rst),
+        .data_in(four_new_data_out),
+        .data_out(new_data_out_3)
+    );
+
     // UART Transmitter to FTDI2232
     // TODO: instantiate the UART transmitter you just wrote, using the input signals from above.
+
+    logic [7:0] transmit_byte;
+    logic uart_data_valid;
  
     logic trig_trans = 0;
     logic inc_trans = 0;
 
     uart_transmit
-    #(   .INPUT_CLOCK_FREQ(100_000_000), // 100 MHz
+    #(  .INPUT_CLOCK_FREQ(100_000_000), // 100 MHz
         .BAUD_RATE(115_200)
     )my_uart_transmit
     ( .clk_in(clk_100mhz),
       .rst_in(sys_rst),
-      .data_byte_in(douta),
-      .trigger_in(btn[2]),
+      .data_byte_in(transmit_byte), // douta_pt),
+      .trigger_in(uart_data_valid),
       .busy_out(uart_busy),
       .tx_wire_out(uart_txd)
     );
  
+   // logic [8:0] prev_chunk = 0;
+   // logic [16:0] full_chunk = 0;
+   // logic has_prev_chunk = 0;
+   // logic full_chunk_valid = 0;
 
-   always_ff @(posedge clk_100mhz)begin
-     uart_rx_buf0 <= uart_rxd;
-     uart_rx_buf1 <= uart_rx_buf0;
-     new_data_out_buf <= new_data_out;
-   end
- 
+
  
     // 8+8+4 = 20 max (can technically do a tighter bound but so be it)
     logic [20:0] total_count;
-    localparam BRAM_1_SIZE = 500_00; // MUST CHANGE
-    localparam BRAM_2_SIZE = 500_00; // MUST CHANGE
- 
+    // localparam BRAM_1_SIZE = 40; // MUST CHANGE
+    // localparam BRAM_2_SIZE = 40; // MUST CHANGE
  
     // BRAM Memory
     // We've configured this for you, but you'll need to hook up your address and data ports to the rest of your logic!
  
-    parameter BRAM_WIDTH = 18;
-    parameter BRAM_DEPTH = 500_00; // 40_000 samples = 5 seconds of samples at 8kHz sample
+    parameter BRAM_WIDTH = 32;
+    parameter BRAM_DEPTH = 25_250; // 40_000 samples = 5 seconds of samples at 8kHz sample
     parameter ADDR_WIDTH = $clog2(BRAM_DEPTH);
  
     // only using port a for reads: we only use dout
@@ -150,7 +146,7 @@ module top_level
         .RAM_DEPTH(BRAM_DEPTH)) audio_bram
         (
          // PORT A
-         .addra(total_count < BRAM_1_SIZE ? total_count : BRAM_1_SIZE),
+         .addra(total_count),// sw), // total_count < BRAM_1_SIZE ? total_count : BRAM_1_SIZE),
          .dina(0), // we only use port A for reads!
          .clka(clk_100mhz),
          .wea(1'b0), // read only
@@ -160,9 +156,9 @@ module top_level
          .douta(douta),
          // PORT B
          .addrb(addrb),
-         .dinb(dinb),
+         .dinb(data_byte_out_buf),
          .clkb(clk_100mhz),
-         .web(addrb < BRAM_1_SIZE), // write ONLY IF WITHIN THE SIZE
+         .web(new_data_out_buf && addrb < BRAM_DEPTH), // write always
          .enb(1'b1),
          .rstb(sys_rst),
          .regceb(1'b1),
@@ -173,8 +169,8 @@ module top_level
    // BRAM Memory
    // We've configured this for you, but you'll need to hook up your address and data ports to the rest of your logic!
 
-   parameter PT_BRAM_WIDTH = 1; // 1;
-   parameter PT_BRAM_DEPTH = 500_00; // 784; // 40_000 samples = 5 seconds of samples at 8kHz sample
+   parameter PT_BRAM_WIDTH = 2; // 1;
+   parameter PT_BRAM_DEPTH = 25_000; // 784; // 40_000 samples = 5 seconds of samples at 8kHz sample
    parameter PT_ADDR_WIDTH = $clog2(PT_BRAM_DEPTH);
 
    // only using port a for reads: we only use dout
@@ -188,74 +184,111 @@ module top_level
    xilinx_true_dual_port_read_first_2_clock_ram
      #(.RAM_WIDTH(PT_BRAM_WIDTH),
        .RAM_DEPTH(PT_BRAM_DEPTH)) pt_bram
+        (
+         // PORT A
+         .addra(total_count - BRAM_DEPTH), // total_count < BRAM_1_SIZE ? total_count : BRAM_1_SIZE),
+         .dina(0), // we only use port A for reads!
+         .clka(clk_100mhz),
+         .wea(1'b0), // read only
+         .ena(1'b1),
+         .rsta(sys_rst),
+         .regcea(1'b1),
+         .douta(douta_pt),
+         // PORT B
+         .addrb(addrb),
+         .dinb(data_byte_out_buf),
+         .clkb(clk_100mhz),
+         .web(new_data_out_buf && addrb >= BRAM_DEPTH && addrb < BRAM_DEPTH + PT_BRAM_DEPTH), // write always
+         .enb(1'b1),
+         .rstb(sys_rst),
+         .regceb(1'b1),
+         .doutb() // we only use port B for writes!
+         );
+
+   parameter SK_BRAM_WIDTH = 2; //1;
+   parameter SK_BRAM_DEPTH = 50; // 784_000; // 40_000 samples = 5 seconds of samples at 8kHz sample
+   parameter SK_ADDR_WIDTH = $clog2(SK_BRAM_DEPTH);
+
+   // only using port a for reads: we only use dout
+   logic [SK_BRAM_WIDTH-1:0]     douta_sk;
+   logic [SK_ADDR_WIDTH-1:0]     addra_sk;
+
+   // only using port b for writes: we only use din
+   logic [SK_BRAM_WIDTH-1:0]     dinb_sk;
+   logic [SK_ADDR_WIDTH-1:0]     addrb_sk;
+
+   xilinx_true_dual_port_read_first_2_clock_ram
+     #(.RAM_WIDTH(SK_BRAM_WIDTH),
+       .RAM_DEPTH(SK_BRAM_DEPTH)) sk_bram
        (
         // PORT A
-        .addra(total_count < BRAM_1_SIZE + BRAM_2_SIZE ? total_count - BRAM_1_SIZE : BRAM_2_SIZE),
+        .addra(total_count - BRAM_DEPTH - PT_BRAM_DEPTH),
         .dina(0), // we only use port A for reads!
         .clka(clk_100mhz),
         .wea(1'b0), // read only
         .ena(1'b1),
         .rsta(sys_rst),
         .regcea(1'b1),
-        .douta(douta_pt),
-        // PORT B
-        .addrb(addrb - BRAM_1_SIZE),
-        .dinb(dinb_pt),
-        .clkb(clk_100mhz),
-        .web(addrb < BRAM_1_SIZE + BRAM_2_SIZE), // write always
-        .enb(1'b1),
-        .rstb(sys_rst),
-        .regceb(1'b1),
-        .doutb() // we only use port B for writes!
+        .douta(douta_sk),
+         // PORT B
+         .addrb(addrb),
+         .dinb(data_byte_out_buf),
+         .clkb(clk_100mhz),
+         .web(new_data_out_buf && addrb >= BRAM_DEPTH + PT_BRAM_DEPTH && addrb < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH), // write always
+         .enb(1'b1),
+         .rstb(sys_rst),
+         .regceb(1'b1),
+         .doutb() // we only use port B for writes!
         );
 
-//    parameter SK_BRAM_WIDTH = 4; //1;
-//    parameter SK_BRAM_DEPTH = 196_000; // 784_000; // 40_000 samples = 5 seconds of samples at 8kHz sample
-//    parameter SK_ADDR_WIDTH = $clog2(SK_BRAM_DEPTH);
-// 
-//    // only using port a for reads: we only use dout
-//    logic [SK_BRAM_WIDTH-1:0]     douta_sk;
-//    logic [SK_ADDR_WIDTH-1:0]     addra_sk;
-// 
-//    // only using port b for writes: we only use din
-//    logic [SK_BRAM_WIDTH-1:0]     dinb_sk;
-//    logic [SK_ADDR_WIDTH-1:0]     addrb_sk;
-// 
-//    xilinx_true_dual_port_read_first_2_clock_ram
-//      #(.RAM_WIDTH(SK_BRAM_WIDTH),
-//        .RAM_DEPTH(SK_BRAM_DEPTH)) sk_bram
-//        (
-//         // PORT A
-//         .addra(addra_sk),
-//         .dina(0), // we only use port A for reads!
-//         .clka(clk_100mhz),
-//         .wea(1'b0), // read only
-//         .ena(1'b1),
-//         .rsta(sys_rst),
-//         .regcea(1'b1),
-//         .douta(douta_sk),
-//         // PORT B
-//         .addrb(addrb_sk),
-//         .dinb(dinb_sk),
-//         .clkb(clk_100mhz),
-//         .web(1'b1), // write always
-//         .enb(1'b1),
-//         .rstb(sys_rst),
-//         .regceb(1'b1),
-//         .doutb() // we only use port B for writes!
-//         );
+
+   parameter B_BRAM_WIDTH = 32; //1;
+   parameter B_BRAM_DEPTH = 2_500; // 784_000; // 40_000 samples = 5 seconds of samples at 8kHz sample
+   parameter B_ADDR_WIDTH = $clog2(B_BRAM_DEPTH);
+
+   // only using port a for reads: we only use dout
+   logic [B_BRAM_WIDTH-1:0]     douta_b;
+   logic [B_ADDR_WIDTH-1:0]     addra_b;
+
+   // only using port b for writes: we only use din
+   logic [B_BRAM_WIDTH-1:0]     dinb_b;
+   logic [B_ADDR_WIDTH-1:0]     addrb_b;
+
+   xilinx_true_dual_port_read_first_2_clock_ram
+     #(.RAM_WIDTH(B_BRAM_WIDTH),
+       .RAM_DEPTH(B_BRAM_DEPTH)) b_bram
+       (
+        // PORT A
+        .addra(total_count - BRAM_DEPTH - PT_BRAM_DEPTH - SK_BRAM_DEPTH),
+        .dina(0), // we only use port A for reads!
+        .clka(clk_100mhz),
+        .wea(1'b0), // read only
+        .ena(1'b1),
+        .rsta(sys_rst),
+        .regcea(1'b1),
+        .douta(douta_b),
+         // PORT B
+         .addrb(addrb),
+         .dinb(data_byte_out_buf),
+         .clkb(clk_100mhz),
+         .web(new_data_out_buf && addrb >= BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH && addrb < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH + B_BRAM_DEPTH), // write always
+         .enb(1'b1),
+         .rstb(sys_rst),
+         .regceb(1'b1),
+         .doutb() // we only use port B for writes!
+        );
 
 
 
  
-    // Memory addressing
-    // TODO: instantiate an event counter that increments once every 8000th of a second
-    // for addressing the (port A) data we want to send out to LINE OUT!
-    evt_counter #(.MAX_COUNT(BRAM_1_SIZE + BRAM_2_SIZE)) port_a_counter(
-         .clk_in(clk_100mhz),
-         .rst_in(sys_rst),
-         .evt_in(btn[1]),
-         .count_out(total_count));
+    // // Memory addressing
+    // // TODO: instantiate an event counter that increments once every 8000th of a second
+    // // for addressing the (port A) data we want to send out to LINE OUT!
+    // evt_counter #(.MAX_COUNT(BRAM_1_SIZE)) port_a_counter(
+    //      .clk_in(clk_100mhz),
+    //      .rst_in(sys_rst),
+    //      .evt_in(new_data_out_buf),
+    //      .count_out(total_count));
  
  
  
@@ -264,10 +297,71 @@ module top_level
     evt_counter #(.MAX_COUNT(BRAM_1_SIZE + BRAM_2_SIZE)) port_b_counter(
          .clk_in(clk_100mhz),
          .rst_in(sys_rst),
-         .evt_in(new_data_out),
+         .evt_in(four_new_data_out),
          .count_out(addrb));
  
     // reminder TODO: go up to your PWM module, wire up the speaker to play the data from port A dout.
+
+   logic [1:0] idx;
+
+   always_ff @(posedge clk_100mhz)begin
+     if (sys_rst) begin
+        idx <= 0;
+        total_count <= 0;
+     end else begin
+     // CHECKOFF 2
+     uart_rx_buf0 <= uart_rxd;
+     uart_rx_buf1 <= uart_rx_buf0;
+     new_data_out_buf <= four_new_data_out;
+     data_byte_out_buf <= data_four_byte_out;
+
+     if (btn[2]) begin
+        if (!uart_busy) begin
+            case (idx)
+                2'b00: begin
+                    transmit_byte <= total_count < BRAM_DEPTH ? douta[7+24:24] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b;
+                    idx <= 2'b01;
+                end
+                2'b01: begin
+                    transmit_byte <= total_count < BRAM_DEPTH ? douta[7+16:16] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b;
+                    idx <= 2'b10;
+                end
+                2'b10: begin
+                    transmit_byte <= total_count < BRAM_DEPTH ? douta[7+8:8] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b;
+                    idx <= 2'b11;
+                end
+                2'b11: begin
+                    transmit_byte <= total_count < BRAM_DEPTH ? douta[7:0] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b;
+                    idx <= 2'b00;
+                    total_count <= total_count + 1;
+                end
+            endcase
+        end
+        uart_data_valid <= 1;
+     end else begin
+        uart_data_valid <= 0;
+        total_count <= 0;
+        idx <= 0;
+     end
+
+      // if (new_data_out) begin
+      //     if (!has_prev_chunk) begin
+      //        prev_chunk <= dinb;
+      //        has_prev_chunk <= 1;
+      //        full_chunk_valid <= 0;
+      //     end else begin
+      //        full_chunk <= {dinb, prev_chunk};
+      //        has_prev_chunk <= 0;
+      //        full_chunk_valid <= 1;
+      //     end
+      // end else begin
+      //    full_chunk_valid <= 0;
+      // end
+
+     // combining our a few bytes
+     end
+   end
+ 
 
 endmodule // top_level
 
