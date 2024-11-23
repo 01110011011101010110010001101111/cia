@@ -22,8 +22,9 @@ module top_level
    assign sys_rst = btn[0];
 
    // these don't need to be 8-bit but uhhhh yes
-   logic [7:0] q = 64;
-   logic [7:0] p = 16;
+   // each is 1 << q or 1 << p
+   logic [7:0] q = 18;
+   logic [7:0] p = 10;
 
    // Checkoff 1: Microphone->SPI->UART->Computer
 
@@ -98,6 +99,9 @@ module top_level
     logic [7:0] transmit_byte;
     logic uart_data_valid;
  
+    logic trig_trans = 0;
+    logic inc_trans = 0;
+
     uart_transmit
     #(  .INPUT_CLOCK_FREQ(100_000_000), // 100 MHz
         .BAUD_RATE(115_200)
@@ -122,7 +126,6 @@ module top_level
     // localparam BRAM_1_SIZE = 40; // MUST CHANGE
     // localparam BRAM_2_SIZE = 40; // MUST CHANGE
  
- 
     // BRAM Memory
     // We've configured this for you, but you'll need to hook up your address and data ports to the rest of your logic!
  
@@ -136,7 +139,7 @@ module top_level
  
     // only using port b for writes: we only use din
     logic [BRAM_WIDTH-1:0]     dinb;
-    logic [ADDR_WIDTH-1:0]     addrb;
+    logic [ADDR_WIDTH-1:0]     addrb = 0;
  
     xilinx_true_dual_port_read_first_2_clock_ram
       #(.RAM_WIDTH(BRAM_WIDTH),
@@ -291,7 +294,7 @@ module top_level
  
     // TODO: instantiate another event counter that increments with each new UART data byte
     // for addressing the (port B) place to send our UART_RX data!
-    evt_counter #(.MAX_COUNT(BRAM_DEPTH)) port_b_counter(
+    evt_counter #(.MAX_COUNT(BRAM_1_SIZE + BRAM_2_SIZE)) port_b_counter(
          .clk_in(clk_100mhz),
          .rst_in(sys_rst),
          .evt_in(four_new_data_out),

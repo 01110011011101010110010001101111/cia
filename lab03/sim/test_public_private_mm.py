@@ -31,7 +31,7 @@ module private_public_mm(input wire clk_in,
 
 k = 10
 N = 12
-q = 2**18 #64
+q = 2**16 #64
 p = 16
 
 s = [np.random.randint(0, 2, N) for _ in range(k)]
@@ -87,15 +87,6 @@ async def test_small(dut, N=N, k=k):
     for h in range(k):
         print(h)
         for i in range(0, N, 2):
-            # await RisingEdge(dut.A_ready)
-            await ClockCycles(dut.clk_in, 1, rising = False)
-            dut.A_valid.value = 1
-            dut.B_ready.value = 1
-            dut.pk_A.value = int(make_num(A[h][i:i+2], 18))
-            dut.A_idx.value = i
-            await ClockCycles(dut.clk_in, 1, rising = False)
-            # breakpoint()
-            dut.A_valid.value = 0
 
             for j in range(0, N, 2):
                 # breakpoint()
@@ -105,10 +96,14 @@ async def test_small(dut, N=N, k=k):
                 
                 dut.s_idx.value = j
 
-                await ClockCycles(dut.clk_in, 1, rising = False)
-                dut.s_valid.value = 0
+                dut.pk_A.value = int(make_num(A[h][i:i+2], 16))
+                dut.A_idx.value = i
+                dut.A_valid.value = 1
 
                 await ClockCycles(dut.clk_in, 1, rising = False)
+                dut.s_valid.value = 0
+                dut.A_valid.value = 0
+
                 # breakpoint()
 
                 index_B = dut.idx_B.value
@@ -128,9 +123,9 @@ async def test_small(dut, N=N, k=k):
                 
                 for l in range(4):
                     print("Correct number: ", something[l])
-                    print(index_B, l, bit_slice(value_B, l*18, l*18+17))
+                    print(index_B, l, bit_slice(value_B, l*16, l*16+15))
                     if (index_B+l < len(output[h])):
-                        output[h][index_B+l] += bit_slice(value_B, l*18, l*18+17)
+                        output[h][index_B+l] += bit_slice(value_B, l*16, l*16+15)
                         output[h][index_B+l] %= q
 
         assert (np.array_equal(output[h], polynomial_mult(A[h], s[h]))), f"Expected {[int(x) for x in (polynomial_mult(A[h], s[h]))]} but got {output[h]}"    
