@@ -127,7 +127,7 @@ module top_level
     // We've configured this for you, but you'll need to hook up your address and data ports to the rest of your logic!
  
     parameter BRAM_WIDTH = 32;
-    parameter BRAM_DEPTH = 25_250; // 40_000 samples = 5 seconds of samples at 8kHz sample
+    parameter BRAM_DEPTH = 1 + 25;//_250; // 40_000 samples = 5 seconds of samples at 8kHz sample
     parameter ADDR_WIDTH = $clog2(BRAM_DEPTH);
  
     // only using port a for reads: we only use dout
@@ -166,8 +166,8 @@ module top_level
    // BRAM Memory
    // We've configured this for you, but you'll need to hook up your address and data ports to the rest of your logic!
 
-   parameter PT_BRAM_WIDTH = 2; // 1;
-   parameter PT_BRAM_DEPTH = 25_000; // 784; // 40_000 samples = 5 seconds of samples at 8kHz sample
+   parameter PT_BRAM_WIDTH = 32; // 1;
+   parameter PT_BRAM_DEPTH = 25;// _000; // 784; // 40_000 samples = 5 seconds of samples at 8kHz sample
    parameter PT_ADDR_WIDTH = $clog2(PT_BRAM_DEPTH);
 
    // only using port a for reads: we only use dout
@@ -192,7 +192,7 @@ module top_level
          .regcea(1'b1),
          .douta(douta_pt),
          // PORT B
-         .addrb(addrb),
+         .addrb(addrb - BRAM_DEPTH),
          .dinb(data_byte_out_buf),
          .clkb(clk_100mhz),
          .web(new_data_out_buf && addrb >= BRAM_DEPTH && addrb < BRAM_DEPTH + PT_BRAM_DEPTH), // write always
@@ -203,7 +203,7 @@ module top_level
          );
 
    parameter SK_BRAM_WIDTH = 2; //1;
-   parameter SK_BRAM_DEPTH = 50; // 784_000; // 40_000 samples = 5 seconds of samples at 8kHz sample
+   parameter SK_BRAM_DEPTH = 5; // 0; // 784_000; // 40_000 samples = 5 seconds of samples at 8kHz sample
    parameter SK_ADDR_WIDTH = $clog2(SK_BRAM_DEPTH);
 
    // only using port a for reads: we only use dout
@@ -291,7 +291,7 @@ module top_level
  
     // TODO: instantiate another event counter that increments with each new UART data byte
     // for addressing the (port B) place to send our UART_RX data!
-    evt_counter #(.MAX_COUNT(BRAM_DEPTH)) port_b_counter(
+    evt_counter #(.MAX_COUNT(BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH)) port_b_counter(
          .clk_in(clk_100mhz),
          .rst_in(sys_rst),
          .evt_in(four_new_data_out),
@@ -312,7 +312,7 @@ module top_level
      new_data_out_buf <= four_new_data_out;
      data_byte_out_buf <= data_four_byte_out;
 
-     if (btn[2]) begin
+     if (sw[0]) begin
         if (!uart_busy) begin
             case (idx)
                 2'b00: begin
@@ -333,8 +333,8 @@ module top_level
                     total_count <= total_count + 1;
                 end
             endcase
+            uart_data_valid <= 1;
         end
-        uart_data_valid <= 1;
      end else begin
         uart_data_valid <= 0;
         total_count <= 0;
