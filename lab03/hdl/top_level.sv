@@ -228,7 +228,7 @@ module top_level
         .regcea(1'b1),
         .douta(douta_sk),
          // PORT B
-         .addrb(addrb),
+         .addrb(addrb - BRAM_DEPTH - PT_BRAM_DEPTH),
          .dinb(data_byte_out_buf),
          .clkb(clk_100mhz),
          .web(new_data_out_buf && addrb >= BRAM_DEPTH + PT_BRAM_DEPTH && addrb < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH), // write always
@@ -265,7 +265,7 @@ module top_level
         .regcea(1'b1),
         .douta(douta_b),
          // PORT B
-         .addrb(addrb),
+         .addrb(addrb - BRAM_DEPTH - PT_BRAM_DEPTH - SK_BRAM_DEPTH),
          .dinb(data_byte_out_buf),
          .clkb(clk_100mhz),
          .web(new_data_out_buf && addrb >= BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH && addrb < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH + B_BRAM_DEPTH), // write always
