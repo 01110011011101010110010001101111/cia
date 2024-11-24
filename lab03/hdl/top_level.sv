@@ -195,7 +195,7 @@ module top_level
      #(.RAM_WIDTH(PT_BRAM_WIDTH),
        .RAM_DEPTH(PT_BRAM_DEPTH),
         .RAM_PERFORMANCE("HIGH_PERFORMANCE"),
-        .INIT_FILE(`FPATH(m.mem))) pt_bram
+        .INIT_FILE(`FPATH(pt.mem))) pt_bram
         (
          // PORT A
          .addra(total_count >= BRAM_DEPTH?total_count - BRAM_DEPTH:0), // total_count < BRAM_1_SIZE ? total_count : BRAM_1_SIZE),
