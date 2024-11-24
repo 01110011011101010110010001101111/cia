@@ -23,6 +23,11 @@ module top_level
    logic               sys_rst;
    assign sys_rst = btn[0];
 
+   logic transmit;
+
+   logic [1:0] state;
+   assign state = {sw[2], sw[1]};
+
    // these don't need to be 8-bit but uhhhh yes
    logic [7:0] q = 64;
    logic [7:0] p = 16;
@@ -146,11 +151,12 @@ module top_level
  
 
     // only using port a for reads: we only use dout
-    logic [BRAM_WIDTH-1:0]     douta;
-    logic [ADDR_WIDTH-1:0]     addra;
+    logic [BRAM_WIDTH-1:0]     douta_A;
+    logic [ADDR_WIDTH-1:0]     addra_A;
  
     // only using port b for writes: we only use din
-    logic [BRAM_WIDTH-1:0]     dinb;
+    logic [BRAM_WIDTH-1:0]     dinb_A;
+    logic [ADDR_WIDTH-1:0]     addrb_A;
     logic [ADDR_WIDTH-1:0]     addrb;
  
     xilinx_true_dual_port_read_first_2_clock_ram
@@ -160,19 +166,19 @@ module top_level
         .INIT_FILE(`FPATH(A.mem))) audio_bram
         (
          // PORT A
-         .addra(total_count),// sw), // total_count < BRAM_1_SIZE ? total_count : BRAM_1_SIZE),
+         .addra(addra_A),// sw), // total_count < BRAM_1_SIZE ? total_count : BRAM_1_SIZE),
          .dina(0), // we only use port A for reads!
          .clka(clk_100mhz),
          .wea(1'b0), // read only
          .ena(1'b1),
          .rsta(sys_rst),
          .regcea(1'b1),
-         .douta(douta),
+         .douta(douta_A),
          // PORT B
-         .addrb(addrb),
+         .addrb(addrb_A),
          .dinb(data_byte_out_buf),
          .clkb(clk_100mhz),
-         .web(new_data_out_buf && addrb < BRAM_DEPTH), // write always
+         .web(new_data_out_buf && addrb_A < BRAM_DEPTH), // write always
          .enb(1'b1),
          .rstb(sys_rst),
          .regceb(1'b1),
@@ -180,8 +186,177 @@ module top_level
          );
 
 
-   // BRAM Memory
-   // We've configured this for you, but you'll need to hook up your address and data ports to the rest of your logic!
+   // ENC LOGIC
+
+  logic [16:0] A_addr_enc;
+  logic [16:0] s_addr_enc;
+  logic [12:0] b_addr_enc_0;
+  logic [12:0] b_addr_enc;
+  logic [9:0] e_addr_enc;
+  logic e_zero_enc;
+  logic addr_valid_enc;
+
+  logic [9:0] s_idx_out_enc;
+  logic [9:0] a_idx_out_enc;
+  logic [9:0] k_idx_out_enc;
+
+   enc_addr_looper
+    #(.DEPTH(100), .K(500)) enc_addr_looper
+    (.clk_in(clk_100mhz),
+     .rst_in(sys_rst),
+     .begin_enc(sw[0]),
+     .inner_N_out(s_idx_out_enc),
+     .outer_N_out(a_idx_out_enc),
+     .k_out(k_idx_out_enc),
+      .A_addr(A_addr_enc),
+      .s_addr(s_addr_enc),
+      .b_addr(b_addr_enc_0),
+      .e_addr(e_addr_enc),
+      .e_zero(e_zero_enc),
+      .addr_valid(addr_valid_enc)
+    );
+
+    logic [9:0] idx_B_enc;
+    logic [47:0] B_out_enc;
+    logic B_valid_ps_mult_enc;
+    logic [9:0] h_out;
+
+    // TODO DO THIS
+    logic e_zero_buff_enc;
+    logic e_zero_enc_out;
+
+    logic a_valid_buffer_enc;
+    logic a_valid_enc;
+    logic real_b_valid_enc;
+
+    logic e_valid_buffer_enc;
+    logic e_valid_enc;
+
+    logic [9:0] a_idx_buffer_enc;
+    logic [9:0] a_idx_enc;
+
+    logic [9:0] s_idx_buffer_enc;
+    logic [9:0] s_idx_enc;
+
+    logic [9:0] h_idx_buffer_enc;
+    logic [9:0] h_idx_enc;
+
+    logic[9:0] idx_poly_out_enc;
+
+    logic [9:0] h_out_ps_mult_enc;
+
+    public_private_mm
+    #(.DEPTH(100))
+    my_pub_sec_mm (.clk_in(clk_100mhz),
+                    .rst_in(sys_rst),
+                    .A_valid(a_valid_enc),
+                    .s_valid(a_valid_enc),
+                    .A_idx(a_idx_enc << 1),
+                    .s_idx(s_idx_enc << 1),
+                    .pk_A(douta_A),
+                    .sk_s(douta_sk),
+                    .idx_B(idx_poly_out_enc),
+                    .B_out(B_out_enc),
+                    .B_valid(B_valid_ps_mult_enc),
+                    .h_in(h_idx_enc),
+                    .h_out(h_out_ps_mult_enc)
+              );
+
+    // TODO: fake message buffer
+
+    always_ff @(posedge clk_100mhz) begin
+      if(sys_rst) begin
+        a_valid_buffer_enc <= 0;
+        a_valid_enc <= 0;
+      end else begin
+        a_valid_buffer_enc <= addr_valid_enc;
+        a_valid_enc <= a_valid_buffer_enc;
+        real_b_valid_enc <= a_valid_enc;
+
+        a_idx_buffer_enc <= a_idx_out_enc;
+        a_idx_enc <= a_idx_buffer_enc;
+
+        s_idx_buffer_enc <= s_idx_out_enc;
+        s_idx_enc <= s_idx_buffer_enc;
+
+        h_idx_buffer_enc <= k_idx_out_enc;
+        h_idx_enc <= h_idx_buffer_enc;
+
+        b_addr_enc <= b_addr_enc_0;
+
+        e_valid_buffer_enc <= addr_valid_enc;
+        e_valid_enc <= e_valid_buffer_enc;
+
+        e_zero_buff_enc <= e_zero_enc;
+        e_zero_enc_out <= e_zero_buff_enc;
+
+        e_lsfr_simulator <= e_zero_enc_out?douta_pt<<10:0;
+      end
+    end
+
+    logic[31:0] e_lsfr_simulator;
+
+    logic sum_enc_valid;
+    logic [9:0] sum_idx_enc;
+    logic [9:0] b_adder_h_out_enc;
+
+    b_adder
+    #(.DEPTH(100), .ADD(1))
+    my_b_adder (.clk_in(clk_100mhz),
+     .rst_in(sys_rst),
+     .poly_valid(B_valid_ps_mult_enc),
+     .poly_in(B_out_enc),
+     .poly_idx(idx_poly_out_enc),
+     .e_valid(real_b_valid_enc),
+     .e_in(e_lsfr_simulator),
+     .b_idx(idx_poly_out_enc),
+     .b_valid(real_b_valid_enc),
+     .b_in(douta_b),
+     .sum_valid(sum_enc_valid),
+     .sum(dinb_b),
+     .sum_idx(sum_idx_enc),
+     .h_in(h_out_ps_mult_enc),
+      .h_out(b_adder_h_out_enc)
+              );
+
+    always_comb begin
+      case (state)
+            2'b00: begin
+                transmit = 1;
+                addra_A = total_count;
+                addra_pt = total_count - BRAM_DEPTH;
+                addra_sk = (total_count - BRAM_DEPTH - PT_BRAM_DEPTH);
+                addra_b = total_count - BRAM_DEPTH - PT_BRAM_DEPTH - SK_BRAM_DEPTH;
+
+                addrb_b = addrb - BRAM_DEPTH - PT_BRAM_DEPTH - SK_BRAM_DEPTH;
+            end
+            2'b01: begin
+              if (transmit) begin
+                transmit = 1;
+                addra_A = total_count;
+                addra_pt = total_count - BRAM_DEPTH;
+                addra_sk = (total_count - BRAM_DEPTH - PT_BRAM_DEPTH);
+                addra_b = total_count - BRAM_DEPTH - PT_BRAM_DEPTH - SK_BRAM_DEPTH;
+                addrb_b = sum_idx_enc >> 1;
+              end else begin
+                transmit = (h_out_ps_mult_enc == 500 && sum_idx_enc == 98 && sum_enc_valid);
+                addra_A = A_addr_enc;
+                addra_pt = e_addr_enc;
+                addra_sk = s_addr_enc;
+                addra_b = b_addr_enc;
+                // addrb_b = addrb - BRAM_DEPTH - PT_BRAM_DEPTH - SK_BRAM_DEPTH;
+              end
+            end
+            2'b10: begin
+                
+            end
+            2'b11: begin
+                
+            end
+            default: begin
+            end
+        endcase
+    end
 
    // only using port a for reads: we only use dout
    logic [PT_BRAM_WIDTH-1:0]     douta_pt;
@@ -198,7 +373,7 @@ module top_level
         .INIT_FILE(`FPATH(pt.mem))) pt_bram
         (
          // PORT A
-         .addra(total_count >= BRAM_DEPTH?total_count - BRAM_DEPTH:0), // total_count < BRAM_1_SIZE ? total_count : BRAM_1_SIZE),
+         .addra(addra_pt), // total_count < BRAM_1_SIZE ? total_count : BRAM_1_SIZE),
          .dina(0), // we only use port A for reads!
          .clka(clk_100mhz),
          .wea(1'b0), // read only
@@ -234,7 +409,7 @@ module top_level
         .INIT_FILE(`FPATH(s.mem))) sk_bram
        (
         // PORT A
-        .addra((total_count - BRAM_DEPTH - PT_BRAM_DEPTH)),
+        .addra(addra_sk),
         .dina(0), // we only use port A for reads!
         .clka(clk_100mhz),
         .wea(1'b0), // read only
@@ -269,7 +444,7 @@ module top_level
         .INIT_FILE(`FPATH(b.mem))) b_bram
        (
         // PORT A
-        .addra((total_count - BRAM_DEPTH - PT_BRAM_DEPTH - SK_BRAM_DEPTH)),
+        .addra(addra_b),
         .dina(0), // we only use port A for reads!
         .clka(clk_100mhz),
         .wea(1'b0), // read only
@@ -278,7 +453,7 @@ module top_level
         .regcea(1'b1),
         .douta(douta_b),
          // PORT B
-         .addrb(addrb - BRAM_DEPTH - PT_BRAM_DEPTH - SK_BRAM_DEPTH),
+         .addrb(addrb_b),
          .dinb(data_byte_out_buf),
          .clkb(clk_100mhz),
          .web(new_data_out_buf && addrb >= BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH && addrb < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH + B_BRAM_DEPTH), // write always
@@ -320,7 +495,7 @@ module top_level
      if (sys_rst) begin
         idx <= 0;
         total_count <= 0;
-     end else begin
+     end else if (transmit) begin
      
      uart_rx_buf0 <= uart_rxd;
      uart_rx_buf1 <= uart_rx_buf0;
@@ -331,19 +506,19 @@ module top_level
         if (!uart_busy) begin
             case (idx)
                 2'b00: begin
-                    transmit_byte <= total_count < BRAM_DEPTH ? douta[7:0] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b;
+                    transmit_byte <= total_count < BRAM_DEPTH ? douta_A[7:0] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b;
                     idx <= 2'b01;
                 end
                 2'b01: begin
-                    transmit_byte <= total_count < BRAM_DEPTH ? douta[7+8:8] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b;
+                    transmit_byte <= total_count < BRAM_DEPTH ? douta_A[7+8:8] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b;
                     idx <= 2'b10;
                 end
                 2'b10: begin
-                    transmit_byte <= total_count < BRAM_DEPTH ? douta[7+16:16] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b;
+                    transmit_byte <= total_count < BRAM_DEPTH ? douta_A[7+16:16] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b;
                     idx <= 2'b11;
                 end
                 2'b11: begin
-                    transmit_byte <= total_count < BRAM_DEPTH ? douta[7+24:24] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b;
+                    transmit_byte <= total_count < BRAM_DEPTH ? douta_A[7+24:24] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b;
                     idx <= 2'b00;
                     total_count <= total_count + 1;
                 end
