@@ -115,10 +115,27 @@ module top_level
    // logic has_prev_chunk = 0;
    // logic full_chunk_valid = 0;
 
-
+    parameter BRAM_WIDTH = 32;
+    parameter BRAM_DEPTH = 1 + 25_250; // 40_000 samples = 5 seconds of samples at 8kHz sample
+    parameter ADDR_WIDTH = $clog2(BRAM_DEPTH);
  
+    parameter PT_BRAM_WIDTH = 2; // 1;
+    parameter PT_BRAM_DEPTH = 1 + 25_000; // 784; // 40_000 samples = 5 seconds of samples at 8kHz sample
+    parameter PT_ADDR_WIDTH = $clog2(PT_BRAM_DEPTH);
+
+    parameter SK_BRAM_WIDTH = 2; //1;
+    parameter SK_BRAM_DEPTH = 1 + 50; // 784_000; // 40_000 samples = 5 seconds of samples at 8kHz sample
+    parameter SK_ADDR_WIDTH = $clog2(SK_BRAM_DEPTH);
+
+    parameter B_BRAM_WIDTH = 32; //1;
+    parameter B_BRAM_DEPTH = 1 + 2_500; // 784_000; // 40_000 samples = 5 seconds of samples at 8kHz sample
+    parameter B_ADDR_WIDTH = $clog2(B_BRAM_DEPTH);
+
+    parameter COUNT_SIZE = $clog(BRAM_DEPTH + PT_BRAM_DEPTH + PT_BRAM_DEPTH + B_BRAM_DEPTH);
+
+
     // 8+8+4 = 20 max (can technically do a tighter bound but so be it)
-    logic [20:0] total_count;
+    logic [COUNT_SIZE:0] total_count;
     // localparam BRAM_1_SIZE = 40; // MUST CHANGE
     // localparam BRAM_2_SIZE = 40; // MUST CHANGE
  
@@ -126,10 +143,7 @@ module top_level
     // BRAM Memory
     // We've configured this for you, but you'll need to hook up your address and data ports to the rest of your logic!
  
-    parameter BRAM_WIDTH = 32;
-    parameter BRAM_DEPTH = 1 + 25;//_250; // 40_000 samples = 5 seconds of samples at 8kHz sample
-    parameter ADDR_WIDTH = $clog2(BRAM_DEPTH);
- 
+
     // only using port a for reads: we only use dout
     logic [BRAM_WIDTH-1:0]     douta;
     logic [ADDR_WIDTH-1:0]     addra;
@@ -166,10 +180,6 @@ module top_level
    // BRAM Memory
    // We've configured this for you, but you'll need to hook up your address and data ports to the rest of your logic!
 
-   parameter PT_BRAM_WIDTH = 32; // 1;
-   parameter PT_BRAM_DEPTH = 25;// _000; // 784; // 40_000 samples = 5 seconds of samples at 8kHz sample
-   parameter PT_ADDR_WIDTH = $clog2(PT_BRAM_DEPTH);
-
    // only using port a for reads: we only use dout
    logic [PT_BRAM_WIDTH-1:0]     douta_pt;
    logic [PT_ADDR_WIDTH-1:0]     addra_pt;
@@ -202,9 +212,7 @@ module top_level
          .doutb() // we only use port B for writes!
          );
 
-   parameter SK_BRAM_WIDTH = 2; //1;
-   parameter SK_BRAM_DEPTH = 5; // 0; // 784_000; // 40_000 samples = 5 seconds of samples at 8kHz sample
-   parameter SK_ADDR_WIDTH = $clog2(SK_BRAM_DEPTH);
+
 
    // only using port a for reads: we only use dout
    logic [SK_BRAM_WIDTH-1:0]     douta_sk;
@@ -219,7 +227,7 @@ module top_level
        .RAM_DEPTH(SK_BRAM_DEPTH)) sk_bram
        (
         // PORT A
-        .addra(total_count - BRAM_DEPTH - PT_BRAM_DEPTH),
+        .addra((total_count - BRAM_DEPTH - PT_BRAM_DEPTH)[SK_ADDR_WIDTH-1:0]),
         .dina(0), // we only use port A for reads!
         .clka(clk_100mhz),
         .wea(1'b0), // read only
@@ -239,10 +247,6 @@ module top_level
         );
 
 
-   parameter B_BRAM_WIDTH = 32; //1;
-   parameter B_BRAM_DEPTH = 2_500; // 784_000; // 40_000 samples = 5 seconds of samples at 8kHz sample
-   parameter B_ADDR_WIDTH = $clog2(B_BRAM_DEPTH);
-
    // only using port a for reads: we only use dout
    logic [B_BRAM_WIDTH-1:0]     douta_b;
    logic [B_ADDR_WIDTH-1:0]     addra_b;
@@ -256,7 +260,7 @@ module top_level
        .RAM_DEPTH(B_BRAM_DEPTH)) b_bram
        (
         // PORT A
-        .addra(total_count - BRAM_DEPTH - PT_BRAM_DEPTH - SK_BRAM_DEPTH),
+        .addra((total_count - BRAM_DEPTH - PT_BRAM_DEPTH - SK_BRAM_DEPTH)[B_ADDR_WIDTH-1:0]),
         .dina(0), // we only use port A for reads!
         .clka(clk_100mhz),
         .wea(1'b0), // read only
@@ -291,7 +295,7 @@ module top_level
  
     // TODO: instantiate another event counter that increments with each new UART data byte
     // for addressing the (port B) place to send our UART_RX data!
-    evt_counter #(.MAX_COUNT(BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH)) port_b_counter(
+    evt_counter #(.MAX_COUNT(BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH + B_BRAM_DEPTH)) port_b_counter(
          .clk_in(clk_100mhz),
          .rst_in(sys_rst),
          .evt_in(four_new_data_out),
