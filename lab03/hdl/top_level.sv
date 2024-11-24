@@ -31,9 +31,6 @@ module top_level
 
     // 8kHz trigger using a week 1 counter!
 
-    // TODO: set this parameter to the number of clock cycles between each cycle of an 8kHz trigger
-    localparam CYCLES_PER_TRIGGER = 12500; // MUST CHANGE
-
     // Data Buffer SPI-UART
     // TODO: write some sequential logic to keep track of whether the
     //  current audio_sample is waiting to be sent,
@@ -63,6 +60,7 @@ module top_level
  
     uart_receive
     #(   .INPUT_CLOCK_FREQ(100_000_000), // 100 MHz
+         //.BAUD_RATE(10_000_000)
         .BAUD_RATE(115_200)
     )my_uart_receive
     ( .clk_in(clk_100mhz),
@@ -103,6 +101,7 @@ module top_level
     uart_transmit
     #(  .INPUT_CLOCK_FREQ(100_000_000), // 100 MHz
         .BAUD_RATE(115_200)
+        //.BAUD_RATE(10_000_000)
     )my_uart_transmit
     ( .clk_in(clk_100mhz),
       .rst_in(sys_rst),
@@ -118,7 +117,7 @@ module top_level
    // logic full_chunk_valid = 0;
 
     parameter BRAM_WIDTH = 32;
-    parameter BRAM_DEPTH = 1 + 25_250; // 40_000 samples = 5 seconds of samples at 8kHz sample
+    parameter BRAM_DEPTH = 1 + 25_250;
     parameter ADDR_WIDTH = $clog2(BRAM_DEPTH);
  
     parameter PT_BRAM_WIDTH = 2; // 1;
@@ -133,7 +132,7 @@ module top_level
     parameter B_BRAM_DEPTH = 1 + 2_500; // 784_000; // 40_000 samples = 5 seconds of samples at 8kHz sample
     parameter B_ADDR_WIDTH = $clog2(B_BRAM_DEPTH);
 
-    parameter COUNT_SIZE = $clog(BRAM_DEPTH + PT_BRAM_DEPTH + PT_BRAM_DEPTH + B_BRAM_DEPTH);
+    parameter COUNT_SIZE = $clog2(BRAM_DEPTH + PT_BRAM_DEPTH + PT_BRAM_DEPTH + B_BRAM_DEPTH);
 
 
     // 8+8+4 = 20 max (can technically do a tighter bound but so be it)
@@ -157,7 +156,8 @@ module top_level
     xilinx_true_dual_port_read_first_2_clock_ram
       #(.RAM_WIDTH(BRAM_WIDTH),
         .RAM_DEPTH(BRAM_DEPTH),
-        .INIT_FILE(`FPATH(image.mem))) audio_bram
+        .RAM_PERFORMANCE("HIGH_PERFORMANCE"),
+        .INIT_FILE(`FPATH(A.mem))) audio_bram
         (
          // PORT A
          .addra(total_count),// sw), // total_count < BRAM_1_SIZE ? total_count : BRAM_1_SIZE),
@@ -193,10 +193,12 @@ module top_level
 
    xilinx_true_dual_port_read_first_2_clock_ram
      #(.RAM_WIDTH(PT_BRAM_WIDTH),
-       .RAM_DEPTH(PT_BRAM_DEPTH)) pt_bram
+       .RAM_DEPTH(PT_BRAM_DEPTH),
+        .RAM_PERFORMANCE("HIGH_PERFORMANCE"),
+        .INIT_FILE(`FPATH(m.mem))) pt_bram
         (
          // PORT A
-         .addra(total_count - BRAM_DEPTH), // total_count < BRAM_1_SIZE ? total_count : BRAM_1_SIZE),
+         .addra(total_count >= BRAM_DEPTH?total_count - BRAM_DEPTH:0), // total_count < BRAM_1_SIZE ? total_count : BRAM_1_SIZE),
          .dina(0), // we only use port A for reads!
          .clka(clk_100mhz),
          .wea(1'b0), // read only
@@ -227,7 +229,9 @@ module top_level
 
    xilinx_true_dual_port_read_first_2_clock_ram
      #(.RAM_WIDTH(SK_BRAM_WIDTH),
-       .RAM_DEPTH(SK_BRAM_DEPTH)) sk_bram
+       .RAM_DEPTH(SK_BRAM_DEPTH),
+        .RAM_PERFORMANCE("HIGH_PERFORMANCE"),
+        .INIT_FILE(`FPATH(s.mem))) sk_bram
        (
         // PORT A
         .addra((total_count - BRAM_DEPTH - PT_BRAM_DEPTH)),
@@ -260,7 +264,9 @@ module top_level
 
    xilinx_true_dual_port_read_first_2_clock_ram
      #(.RAM_WIDTH(B_BRAM_WIDTH),
-       .RAM_DEPTH(B_BRAM_DEPTH)) b_bram
+       .RAM_DEPTH(B_BRAM_DEPTH),
+        .RAM_PERFORMANCE("HIGH_PERFORMANCE"),
+        .INIT_FILE(`FPATH(b.mem))) b_bram
        (
         // PORT A
         .addra((total_count - BRAM_DEPTH - PT_BRAM_DEPTH - SK_BRAM_DEPTH)),
@@ -308,13 +314,14 @@ module top_level
     // reminder TODO: go up to your PWM module, wire up the speaker to play the data from port A dout.
 
    logic [1:0] idx;
+   logic uart_transmit_buff;
 
    always_ff @(posedge clk_100mhz)begin
      if (sys_rst) begin
         idx <= 0;
         total_count <= 0;
      end else begin
-     // CHECKOFF 2
+     
      uart_rx_buf0 <= uart_rxd;
      uart_rx_buf1 <= uart_rx_buf0;
      new_data_out_buf <= four_new_data_out;
@@ -324,29 +331,31 @@ module top_level
         if (!uart_busy) begin
             case (idx)
                 2'b00: begin
-                    transmit_byte <= total_count < BRAM_DEPTH ? douta[7+24:24] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b;
+                    transmit_byte <= total_count < BRAM_DEPTH ? douta[7:0] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b;
                     idx <= 2'b01;
                 end
                 2'b01: begin
-                    transmit_byte <= total_count < BRAM_DEPTH ? douta[7+16:16] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b;
+                    transmit_byte <= total_count < BRAM_DEPTH ? douta[7+8:8] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b;
                     idx <= 2'b10;
                 end
                 2'b10: begin
-                    transmit_byte <= total_count < BRAM_DEPTH ? douta[7+8:8] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b;
+                    transmit_byte <= total_count < BRAM_DEPTH ? douta[7+16:16] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b;
                     idx <= 2'b11;
                 end
                 2'b11: begin
-                    transmit_byte <= total_count < BRAM_DEPTH ? douta[7:0] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b;
+                    transmit_byte <= total_count < BRAM_DEPTH ? douta[7+24:24] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b;
                     idx <= 2'b00;
                     total_count <= total_count + 1;
                 end
             endcase
-            uart_data_valid <= 1;
+            uart_data_valid <= 1;//uart_transmit_buff;
+            // uart_transmit_buff <= 1;
         end
      end else begin
         uart_data_valid <= 0;
         total_count <= 0;
         idx <= 0;
+        uart_transmit_buff <= 0;
      end
 
       // if (new_data_out) begin

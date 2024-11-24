@@ -1,21 +1,71 @@
 import serial 
+import pickle
+import numpy as np
 
-SERIAL_PORT_NAME = "/dev/cu.usbserial-88742923009C1"
+SERIAL_PORT_NAME = "/dev/cu.usbserial-8874292300481"
 BAUD_RATE = 115200 
 
 ser = serial.Serial(SERIAL_PORT_NAME,BAUD_RATE)
 print("Serial port initialized")
 
-print("Recording 6 seconds of audio:")
+with open('/Users/ruth/6.2050/fpga-project/Asm.pkl', 'rb') as f:
+    loaded_data = pickle.load(f)
+
+A = loaded_data["A"]
+s = loaded_data["s"]
+m = loaded_data["m"]
+
+def make_num(list, bits):
+    number = 0
+    #for i, val in enumerate(reversed(list)):
+        #number += (val << i*bits)
+    for i, val in enumerate(list):
+        number += (val << i*bits)
+    return number
+
+def bit_slice(number, start, end):
+    shifted = number >> start
+    mask = (1 << (end - start + 1)) - 1
+    return shifted & mask
+
+print("Recording 100000 values:")
 ypoints = []
-for i in range(6):
-    val = int.from_bytes(ser.read(),'little')
-    
+for i in range(500):
+    for j in range(200):
+        print(f"====================== {i}, {j}")
+        # print(A[i][j])
+        print(make_num(A[i][j//2:j//2+2], 16))
+        ans = bit_slice(make_num(A[i][j//2:j//2+2], 16), j%2*8, j%2*8+7)
+        print(ans)
+        # print(A[i][j//2])
+        bytes = ser.read()
+        val = int.from_bytes(bytes,'little')
+        print(val)
+
+        assert val == ans, f"{i}, {j} has error!"
+        
+for i in range(251*4):
+    bytes = ser.read()
+    val = int.from_bytes(bytes,'little')
     print(val)
 
-    # if ((i+1)%8000==0):
-    #     print(f"{(i+1)/8000} seconds complete")
-    # ypoints.append(val)
+for i in range(50*4):
+    print(f"====================== {i}")
+        # print(A[i][j])
+        # print(make_num(A[i][j//2:j//2+2], 16))
+        # ans = bit_slice(make_num(A[i][j//2:j//2+2], 16), j%2*8, j%2*8+7)
+        # print(ans)
+        # print(A[i][j//2])
+    bytes = ser.read()
+    val = int.from_bytes(bytes,'little')
+    print(val)
+
+val = int.from_bytes(bytes,'little')
+while(val == 0):
+    val = int.from_bytes(bytes,'little')
+    print("still zero", val)
+
+        # assert val == ans, f"{i}, {j} has error!"
 
 # with wave.open('output.wav','wb') as wf:
 #     wf.setframerate(8000)
