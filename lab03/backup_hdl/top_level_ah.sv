@@ -1,7 +1,5 @@
 `default_nettype none // prevents system from inferring an undeclared logic (good practice)
 
-`define FPATH(X) `"../data/X`"
-
 module top_level
 (
    input wire          clk_100mhz, //100 MHz onboard clock
@@ -156,8 +154,7 @@ module top_level
  
     xilinx_true_dual_port_read_first_2_clock_ram
       #(.RAM_WIDTH(BRAM_WIDTH),
-        .RAM_DEPTH(BRAM_DEPTH),
-        .INIT_FILE(`FPATH(image.mem))) audio_bram
+        .RAM_DEPTH(BRAM_DEPTH)) audio_bram
         (
          // PORT A
          .addra(total_count),// sw), // total_count < BRAM_1_SIZE ? total_count : BRAM_1_SIZE),
@@ -230,7 +227,7 @@ module top_level
        .RAM_DEPTH(SK_BRAM_DEPTH)) sk_bram
        (
         // PORT A
-        .addra((total_count - BRAM_DEPTH - PT_BRAM_DEPTH)),
+        .addra((total_count - BRAM_DEPTH - PT_BRAM_DEPTH)[SK_ADDR_WIDTH-1:0]),
         .dina(0), // we only use port A for reads!
         .clka(clk_100mhz),
         .wea(1'b0), // read only
@@ -263,7 +260,7 @@ module top_level
        .RAM_DEPTH(B_BRAM_DEPTH)) b_bram
        (
         // PORT A
-        .addra((total_count - BRAM_DEPTH - PT_BRAM_DEPTH - SK_BRAM_DEPTH)),
+        .addra((total_count - BRAM_DEPTH - PT_BRAM_DEPTH - SK_BRAM_DEPTH)[B_ADDR_WIDTH-1:0]),
         .dina(0), // we only use port A for reads!
         .clka(clk_100mhz),
         .wea(1'b0), // read only
@@ -298,8 +295,7 @@ module top_level
  
     // TODO: instantiate another event counter that increments with each new UART data byte
     // for addressing the (port B) place to send our UART_RX data!
-    // evt_counter #(.MAX_COUNT(BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH + B_BRAM_DEPTH)) port_b_counter(
-    evt_counter #(.MAX_COUNT(BRAM_DEPTH)) port_b_counter(
+    evt_counter #(.MAX_COUNT(BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH + B_BRAM_DEPTH)) port_b_counter(
          .clk_in(clk_100mhz),
          .rst_in(sys_rst),
          .evt_in(four_new_data_out),
