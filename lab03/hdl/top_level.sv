@@ -304,8 +304,8 @@ module top_level
  
     // TODO: instantiate another event counter that increments with each new UART data byte
     // for addressing the (port B) place to send our UART_RX data!
-    // evt_counter #(.MAX_COUNT(BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH + B_BRAM_DEPTH)) port_b_counter(
-    evt_counter #(.MAX_COUNT(BRAM_DEPTH)) port_b_counter(
+    evt_counter #(.MAX_COUNT(BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH + B_BRAM_DEPTH)) port_b_counter(
+    // evt_counter #(.MAX_COUNT(BRAM_DEPTH)) port_b_counter(
          .clk_in(clk_100mhz),
          .rst_in(sys_rst),
          .evt_in(four_new_data_out),
