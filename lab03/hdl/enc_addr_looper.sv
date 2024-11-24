@@ -3,9 +3,9 @@ module enc_addr_looper
     (input wire clk_in,
                     input wire rst_in,
                     input wire begin_enc,
-                    output logic [9:0] A_addr,
-                    output logic [9:0] s_addr,
-                    output logic [9:0] b_addr,
+                    output logic [16:0] A_addr,
+                    output logic [16:0] s_addr,
+                    output logic [12:0] b_addr,
                     output logic [9:0] e_addr,
                     output logic e_zero,
                     output logic addr_valid
@@ -15,28 +15,30 @@ module enc_addr_looper
     e_zero describes if e term put into b adder should just be 0
   */
 
+    localparam HALF_DEPTH = DEPTH/2;
+
     logic [5:0] inner_s_idx;
     logic [5:0] inner_A_idx;
     logic [6:0] outer_k_idx;
 
     logic addr_valid_buffer;
 
-    evt_counter #(.MAX_COUNT(DEPTH/2)) inner_s_loop(
+    evt_counter #(.MAX_COUNT(HALF_DEPTH)) inner_s_loop(
          .clk_in(clk_in),
          .rst_in(begin_enc),
          .evt_in(clk_in),
          .count_out(inner_s_idx));
 
-    evt_counter #(.MAX_COUNT(DEPTH/2)) inner_A_loop(
+    evt_counter #(.MAX_COUNT(HALF_DEPTH)) inner_A_loop(
          .clk_in(clk_in),
          .rst_in(begin_enc),
-         .evt_in((inner_s_idx == DEPTH/2 -1)),
+         .evt_in((inner_s_idx == HALF_DEPTH -1)),
          .count_out(inner_A_idx));
 
     evt_counter #(.MAX_COUNT(K)) outer_k_loop(
          .clk_in(clk_in),
          .rst_in(begin_enc),
-         .evt_in((inner_s_idx == DEPTH/2 -1) && (inner_A_idx == DEPTH/2 -1)),
+         .evt_in((inner_s_idx == HALF_DEPTH -1) && (inner_A_idx == HALF_DEPTH -1)),
          .count_out(outer_k_idx));
 
     always_ff @(posedge clk_in) begin
@@ -50,9 +52,9 @@ module enc_addr_looper
         end else begin
             addr_valid_buffer <= addr_valid_buffer?1:begin_enc;
             addr_valid <= addr_valid_buffer;
-            A_addr <= (outer_k_idx * (DEPTH/2)) + inner_A_idx;
-            s_addr <= (outer_k_idx * (DEPTH/2)) + inner_s_idx;
-            b_addr <= (inner_A_idx + inner_s_idx >= DEPTH>>1) ? 0: inner_A_idx + inner_s_idx;
+            A_addr <= (outer_k_idx * (HALF_DEPTH)) + inner_A_idx; // add 1 to everything???
+            s_addr <= (outer_k_idx * (HALF_DEPTH)) + inner_s_idx;
+            b_addr <= (inner_A_idx + inner_s_idx >= HALF_DEPTH) ? 0: inner_A_idx + inner_s_idx;
             e_addr <= inner_s_idx;
             e_zero <= ~(inner_A_idx == 0 && outer_k_idx == 0);
         end

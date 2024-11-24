@@ -173,6 +173,7 @@ async def test_small(dut, N=N, k=k):
             print(polynomial_mult(A[h][i:i+2], s[h]))
             # MAKE THIS EXP BETTER INCLUDE LATER B_exp
             b_exp = [b_exp[r] for r in range(i)]+[(polynomial_mult(A[h][i:i+2], s[h])[r-i] + b_exp[r])%q for r in range(i, len(b_exp))]
+            print(b)
             assert (np.array_equal(b, b_exp)), f"Expected {[int(x) for x in (b_exp)]} but got {b}" 
 
         print(h)
