@@ -60,21 +60,21 @@ for i in range(50*4):
     val = int.from_bytes(bytes,'little')
     print(val)
 
-for i in range((25000-50+1)*4):
+for i in range((1)*4):
     bytes = ser.read()
     val = int.from_bytes(bytes,'little')
     # print(val)
 
-for i in range(50*4):
-    print(f"====================== {i}")
-        # print(A[i][j])
-        # print(make_num(A[i][j//2:j//2+2], 16))
-        # ans = bit_slice(make_num(A[i][j//2:j//2+2], 16), j%2*8, j%2*8+7)
-        # print(ans)
-        # print(A[i][j//2])
-    bytes = ser.read()
-    val = int.from_bytes(bytes,'little')
-    print(val)
+for i in range(500):
+    for j in range(200):
+        print(f"====================== {i}, {j}")
+        s_info = make_num(s[i][2*(j//4):2*(j//4)+2], 1)
+        print(s_info)
+        bytes = ser.read()
+        val = int.from_bytes(bytes,'little')
+        print(val)
+
+        assert s_info == val, f"s error at {i}, {j}"
 
 
 '''val = int.from_bytes(bytes,'little')

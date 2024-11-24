@@ -121,11 +121,11 @@ module top_level
     parameter ADDR_WIDTH = $clog2(BRAM_DEPTH);
  
     parameter PT_BRAM_WIDTH = 2; // 1;
-    parameter PT_BRAM_DEPTH = 1 + 25_000; // 784; // 40_000 samples = 5 seconds of samples at 8kHz sample
+    parameter PT_BRAM_DEPTH = 1 + 50; // 784; // 40_000 samples = 5 seconds of samples at 8kHz sample
     parameter PT_ADDR_WIDTH = $clog2(PT_BRAM_DEPTH);
 
     parameter SK_BRAM_WIDTH = 2; //1;
-    parameter SK_BRAM_DEPTH = 1 + 50; // 784_000; // 40_000 samples = 5 seconds of samples at 8kHz sample
+    parameter SK_BRAM_DEPTH = 1 + 25_000; // 784_000; // 40_000 samples = 5 seconds of samples at 8kHz sample
     parameter SK_ADDR_WIDTH = $clog2(SK_BRAM_DEPTH);
 
     parameter B_BRAM_WIDTH = 32; //1;
