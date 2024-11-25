@@ -200,6 +200,10 @@ module top_level
   logic [9:0] a_idx_out_enc;
   logic [9:0] k_idx_out_enc;
 
+  logic done_enc;
+  logic [4:0] done_enc_buffer;
+  logic done_enc_out;
+ 
    enc_addr_looper
     #(.DEPTH(100), .K(500)) enc_addr_looper
     (.clk_in(clk_100mhz),
@@ -213,7 +217,8 @@ module top_level
       .b_addr(b_addr_enc_0),
       .e_addr(e_addr_enc),
       .e_zero(e_zero_enc),
-      .addr_valid(addr_valid_enc)
+      .addr_valid(addr_valid_enc),
+      .done(done_enc)
     );
 
     logic [9:0] idx_B_enc;
@@ -291,7 +296,13 @@ module top_level
         e_zero_enc_out <= e_zero_buff_enc;
 
         e_lsfr_simulator[15:0] <= (e_zero_enc_out==1)?0:douta_pt[0]<<10;
-        e_lsfr_simulator[32:16] <= (e_zero_enc_out==1)?0:douta_pt[1]<<10;
+        e_lsfr_simulator[31:16] <= (e_zero_enc_out==1)?0:douta_pt[1]<<10;
+
+        done_enc_buffer[0] <= done_enc;
+        for (int i_count = 1; i_count < 4; i_count++) begin
+          done_enc_buffer[i_count] <= done_enc_buffer[i_count-1];
+        end
+        done_enc_out <= done_enc_buffer[4];
       end
     end
 
@@ -340,7 +351,7 @@ module top_level
                 addra_b = total_count - BRAM_DEPTH - PT_BRAM_DEPTH - SK_BRAM_DEPTH;
                 addrb_b = sum_idx_enc >> 1;
               end else begin
-                transmit = (h_out_ps_mult_enc == 500 && sum_idx_enc == 98 && sum_enc_valid);
+                transmit = done_enc_out;
                 addra_A = A_addr_enc;
                 addra_pt = e_addr_enc;
                 addra_sk = s_addr_enc;
@@ -499,6 +510,8 @@ module top_level
      if (sys_rst) begin
         idx <= 0;
         total_count <= 0;
+        done_enc_buffer <= 0;
+        done_enc_out <= 0;
      end else if (transmit) begin
      
      uart_rx_buf0 <= uart_rxd;
