@@ -206,6 +206,7 @@ module top_level
  
    enc_addr_looper
     #(.DEPTH(100), .K(500)) enc_addr_looper
+    //#(.DEPTH(10), .K(5)) enc_addr_looper
     (.clk_in(clk_100mhz),
      .rst_in(sys_rst),
      .begin_enc(sw[0]),
@@ -273,7 +274,6 @@ module top_level
       if(sys_rst) begin
         a_valid_buffer_enc <= 0;
         a_valid_enc <= 0;
-        transmit <= 0;
       end else begin
         a_valid_buffer_enc <= addr_valid_enc;
         a_valid_enc <= a_valid_buffer_enc;
@@ -300,7 +300,7 @@ module top_level
         e_lsfr_simulator[31:16] <= (e_zero_enc_out==1)?0:douta_pt[1]<<10;
 
         done_enc_buffer[0] <= done_enc;
-        for (int i_count = 1; i_count < 4; i_count++) begin
+        for (int i_count = 1; i_count <= 4; i_count++) begin
           done_enc_buffer[i_count] <= done_enc_buffer[i_count-1];
         end
         done_enc_out <= done_enc_buffer[4];

@@ -62,11 +62,11 @@ module enc_addr_looper
                 // addr_valid <= addr_valid_buffer;
 
                 // TODO: if this fails on first on means addr_valid needs correction
-                addr_valid <= addr_valid?1:begin_enc;
-                A_addr <= (outer_k_idx << 5) + (outer_k_idx << 4) + (outer_k_idx << 1) + inner_A_idx; // add 1 to everything???
-                s_addr <= (outer_k_idx << 5) + (outer_k_idx << 4) + (outer_k_idx << 1) + inner_s_idx;
-                // A_addr <= (outer_k_idx * (HALF_DEPTH)) + inner_A_idx; // add 1 to everything???
-                // s_addr <= (outer_k_idx * (HALF_DEPTH)) + inner_s_idx;
+                addr_valid <= addr_valid?(((outer_k_idx == K-1) && (inner_s_idx == HALF_DEPTH -1) && (inner_A_idx == HALF_DEPTH -1))? 0:1 ):begin_enc;
+                // A_addr <= (outer_k_idx << 5) + (outer_k_idx << 4) + (outer_k_idx << 1) + inner_A_idx; // add 1 to everything???
+                // s_addr <= (outer_k_idx << 5) + (outer_k_idx << 4) + (outer_k_idx << 1) + inner_s_idx;
+                A_addr <= (outer_k_idx * (HALF_DEPTH)) + inner_A_idx; // add 1 to everything???
+                s_addr <= (outer_k_idx * (HALF_DEPTH)) + inner_s_idx;
                 b_addr <= (inner_A_idx + inner_s_idx >= HALF_DEPTH) ? 0: inner_A_idx + inner_s_idx;
                 e_addr <= inner_s_idx;
                 e_zero <= ~(inner_A_idx == 0 && outer_k_idx == 0);
