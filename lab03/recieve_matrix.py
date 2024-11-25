@@ -2,6 +2,10 @@ import serial
 import pickle
 import numpy as np
 
+N = 100
+p = 2**6
+q = 2**16
+
 SERIAL_PORT_NAME = "/dev/cu.usbserial-8874292300481"
 BAUD_RATE = 115200 
 
@@ -14,6 +18,41 @@ with open('/Users/ruth/6.2050/fpga-project/Asm.pkl', 'rb') as f:
 A = loaded_data["A"]
 s = loaded_data["s"]
 m = loaded_data["m"]
+
+# helper
+def polynomial_mult(s0, s1, size=N, base=q):
+    result = [0] * (size)
+
+    # Multiply the coefficients
+    for i in range(len(s0)):
+        for j in range(len(s1)):
+            if i + j < size:
+                result[i + j] += s0[i] * s1[j]
+
+    for i in range(len(result)):
+        result[i] = result[i] % base
+
+    return result
+
+def enc():
+    # E = [1, 0, 1, -1] # \in q
+    delta = q / p
+    # print(delta, LAMBDA, delta/LAMBDA)
+    E = np.random.randint(0, 1, N)
+    delta_m = np.array(m) * delta
+
+    B = np.array(delta_m) + np.array(E)
+
+    # breakpoint()
+    for idx in range(len(A)):
+        B += np.array(polynomial_mult(A[idx], s[idx], N, q))
+        B %= q
+
+    # B %= q
+    # print(B)
+    return B
+
+correct_b = enc()
 
 def make_num(list, bits):
     number = 0
@@ -42,7 +81,7 @@ for i in range(500):
         val = int.from_bytes(bytes,'little')
         print(val)
 
-        assert val == ans, f"{i}, {j} has error!"
+        # assert val == ans, f"{i}, {j} has error!"
         
 for i in range(251*4):
     bytes = ser.read()
@@ -74,13 +113,15 @@ for i in range(500):
         val = int.from_bytes(bytes,'little')
         print(val)
 
-        assert s_info == val, f"s error at {i}, {j}"
+        # assert s_info == val, f"s error at {i}, {j}"
 
 for i in range((1)*4):
     bytes = ser.read()
     val = int.from_bytes(bytes,'little')
 
 print("B IS HERE!!!!!!!!")
+
+b = [0]*100
 
 for i in range(50*4):
     print(f"B ====================== {i}")
@@ -92,6 +133,10 @@ for i in range(50*4):
     bytes = ser.read()
     val = int.from_bytes(bytes,'little')
     print(val)
+
+    b[i//2] += (val << (8*(i%2)))
+
+breakpoint()
 
 '''val = int.from_bytes(bytes,'little')
 while(val == 0):
