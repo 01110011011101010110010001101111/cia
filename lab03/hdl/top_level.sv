@@ -333,10 +333,21 @@ module top_level
       .h_out(b_adder_h_out_enc)
               );
 
+    always_ff @(posedge clk_100mhz)begin
+     if (sys_rst) begin
+        transmit <= 0;
+     end else begin
+      if(state == 0) begin
+        transmit <= 0;
+      end else begin
+        transmit <= done_enc_out;
+      end
+     end
+  end
+
     always_comb begin
       case (state)
             2'b00: begin
-                transmit = 1;
                 addra_A = total_count;
                 addra_pt = total_count - BRAM_DEPTH;
                 addra_sk = (total_count - BRAM_DEPTH - PT_BRAM_DEPTH);
@@ -346,14 +357,12 @@ module top_level
             end
             2'b01: begin
               if (transmit) begin
-                transmit = 1;
                 addra_A = total_count;
                 addra_pt = total_count - BRAM_DEPTH;
                 addra_sk = (total_count - BRAM_DEPTH - PT_BRAM_DEPTH);
                 addra_b = total_count - BRAM_DEPTH - PT_BRAM_DEPTH - SK_BRAM_DEPTH;
                 // addrb_b = sum_idx_enc >> 1;
               end else begin
-                transmit = done_enc_out;
                 addra_A = A_addr_enc;
                 addra_pt = e_addr_enc;
                 addra_sk = s_addr_enc;
