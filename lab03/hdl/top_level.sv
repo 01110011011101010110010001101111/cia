@@ -26,23 +26,9 @@ module top_level
    logic transmit;
 
    logic [1:0] state;
+   //assign state[0] = sw[1];
+   //assign state[1] = sw[2];
    assign state = 2'b01;
-
-   // these don't need to be 8-bit but uhhhh yes
-   logic [7:0] q = 64;
-   logic [7:0] p = 16;
-
-   // Checkoff 1: Microphone->SPI->UART->Computer
-
-    // 8kHz trigger using a week 1 counter!
-
-    // Data Buffer SPI-UART
-    // TODO: write some sequential logic to keep track of whether the
-    //  current audio_sample is waiting to be sent,
-    //  and to set the uart_transmit inputs appropriately.
-    //  **be sure to only ever set uart_data_valid high if sw[0] is on,
-    //  so we only send data on UART when we're trying to receive it!
-    // logic                      audio_sample_waiting = 0;
  
     logic [7:0]                uart_data_in;
     logic                      uart_busy;
@@ -350,7 +336,7 @@ module top_level
                 addra_pt = total_count - BRAM_DEPTH;
                 addra_sk = (total_count - BRAM_DEPTH - PT_BRAM_DEPTH);
                 addra_b = total_count - BRAM_DEPTH - PT_BRAM_DEPTH - SK_BRAM_DEPTH;
-                addrb_b = sum_idx_enc >> 1;
+                // addrb_b = sum_idx_enc >> 1;
               end else begin
                 transmit = done_enc_out;
                 addra_A = A_addr_enc;
