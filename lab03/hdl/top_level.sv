@@ -17,7 +17,12 @@ module top_level
    //shut up those rgb LEDs for now (active high):
    assign rgb1 = 0; //set to 0.
    assign rgb0 = 0; //set to 0.
-   assign led = 0;
+   assign led[0] = sw[0];
+
+   assign led[1] = transmit;
+   assign led[2] = done_enc;
+   assign led[3] = done_enc_out;
+   assign led[15:4] = 0;
 
    //have btnd control system reset
    logic               sys_rst;
@@ -187,7 +192,7 @@ module top_level
   logic [9:0] k_idx_out_enc;
 
   logic done_enc;
-  logic [4:0] done_enc_buffer;
+  // logic [4:0] done_enc_buffer;
   logic done_enc_out;
  
    enc_addr_looper
@@ -285,13 +290,23 @@ module top_level
         e_lsfr_simulator[15:0] <= (e_zero_enc_out==1)?0:douta_pt[0]<<10;
         e_lsfr_simulator[31:16] <= (e_zero_enc_out==1)?0:douta_pt[1]<<10;
 
-        done_enc_buffer[0] <= done_enc;
+        /* done_enc_buffer[0] <= done_enc;
         for (int i_count = 1; i_count <= 4; i_count++) begin
           done_enc_buffer[i_count] <= done_enc_buffer[i_count-1];
         end
-        done_enc_out <= done_enc_buffer[4];
+        done_enc_out <= done_enc_buffer[4];*/
       end
     end
+
+    pipeline #(
+      .BITS(1),
+      .STAGES(5)
+    ) done_enc_pipeline (
+        .clk_in(clk_100mhz),
+        .rst_in(sys_rst),
+        .data_in(done_enc),
+        .data_out(done_enc_out)
+    );
 
     logic[31:0] e_lsfr_simulator;
 
@@ -497,8 +512,6 @@ module top_level
      if (sys_rst) begin
         idx <= 0;
         total_count <= 0;
-        done_enc_buffer <= 0;
-        done_enc_out <= 0;
      end else begin
      
      uart_rx_buf0 <= uart_rxd;
