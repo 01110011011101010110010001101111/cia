@@ -290,7 +290,8 @@ module top_level
         e_zero_buff_enc <= e_zero_enc;
         e_zero_enc_out <= e_zero_buff_enc;
 
-        e_lsfr_simulator <= e_zero_enc_out?douta_pt<<10:0;
+        e_lsfr_simulator[15:0] <= (e_zero_enc_out==1)?0:douta_pt[0]<<10;
+        e_lsfr_simulator[32:16] <= (e_zero_enc_out==1)?0:douta_pt[1]<<10;
       end
     end
 
@@ -344,6 +345,8 @@ module top_level
                 addra_pt = e_addr_enc;
                 addra_sk = s_addr_enc;
                 addra_b = b_addr_enc;
+                write_b_valid = sum_enc_valid;
+                addrb_b = sum_idx_enc>>1;
                 // addrb_b = addrb - BRAM_DEPTH - PT_BRAM_DEPTH - SK_BRAM_DEPTH;
               end
             end
@@ -436,6 +439,7 @@ module top_level
    // only using port b for writes: we only use din
    logic [B_BRAM_WIDTH-1:0]     dinb_b;
    logic [B_ADDR_WIDTH-1:0]     addrb_b;
+   logic write_b_valid;
 
    xilinx_true_dual_port_read_first_2_clock_ram
      #(.RAM_WIDTH(B_BRAM_WIDTH),
@@ -454,9 +458,9 @@ module top_level
         .douta(douta_b),
          // PORT B
          .addrb(addrb_b),
-         .dinb(data_byte_out_buf),
+         .dinb(dinb_b), //(data_byte_out_buf),
          .clkb(clk_100mhz),
-         .web(new_data_out_buf && addrb >= BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH && addrb < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH + B_BRAM_DEPTH), // write always
+         .web(write_b_valid),//(new_data_out_buf && addrb >= BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH && addrb < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH + B_BRAM_DEPTH), // write always
          .enb(1'b1),
          .rstb(sys_rst),
          .regceb(1'b1),

@@ -56,8 +56,8 @@ def bit_slice(number, start, end):
     mask = (1 << (end - start + 1)) - 1
     return shifted & mask
 
-@cocotb.test()
-async def test_top_level(dut):
+'''@cocotb.test()
+async def test_top_level_public_private(dut):
     """
     Test top level
     """
@@ -75,7 +75,7 @@ async def test_top_level(dut):
 
     dut.sw[0].value = 1
     await ClockCycles(dut.clk_100mhz, 4, rising=False)
-    for h in range(1):
+    for h in range(100): # worked on 500
         for i in range(0, 100 , 2):
             for j in range(0, 100, 2):
                 something = [int(x) for x in (polynomial_mult(A[h][i:i+2], s[h][j:j+2]))]
@@ -83,11 +83,11 @@ async def test_top_level(dut):
                 value_B = dut.B_out_enc.value
                 index_B = dut.idx_poly_out_enc.value
 
-                print(value_B)
+                # print(value_B)
 
                 for l in range(4):
-                        print("Correct number: ", something[l])
-                        print(bit_slice(value_B, l*16, l*16+15))
+                        # print("Correct number: ", something[l])
+                        # print(bit_slice(value_B, l*16, l*16+15))
 
                         assert bit_slice(value_B, l*16, l*16+15) == something[l], "bro you screwed up"
                         # if (index_B+l < len(output[h])):
@@ -101,7 +101,60 @@ async def test_top_level(dut):
                 # test it on the FPGA :)
 
     dut.sw[0].value = 0
-    await Timer(10, units="ns")  # Small delay to observe the result
+    await Timer(10, units="ns")  # Small delay to observe the result'''
+
+@cocotb.test()
+async def test_top_level_b_adder(dut):
+    """
+    Test top level b_adder
+    """
+    b = [m_val<<10 for m_val in m]
+
+    dut._log.info("Starting...")
+    cocotb.start_soon(Clock(dut.clk_100mhz, 10, units="ns").start())
+
+    dut.btn[0].value = 1
+    dut.sw[0].value = 0
+    dut.sw[1].value = 1
+    dut.sw[2].value = 0
+    await ClockCycles(dut.clk_100mhz, 5, rising=False)
+    dut.btn[0].value = 0
+    await ClockCycles(dut.clk_100mhz, 1, rising=False)
+
+    dut.sw[0].value = 1
+    await ClockCycles(dut.clk_100mhz, 5, rising=False)
+    for h in range(500):
+
+        # poly_row = [int(x) for x in (polynomial_mult(A[h], s[h]))]
+
+        # b = [b[l]+poly_row[l] for l in range(N)]
+
+        for i in range(0, 100, 2):
+            poly_row = [int(x) for x in (polynomial_mult(A[h][i:i+2], s[h]))]
+            b = [b[l] for l in range(i)]+[b[l]+poly_row[l-i] for l in range(i, N)]
+
+            # print(b)
+            # breakpoint()
+            for j in range(0, 100, 2):
+                value_B = dut.dinb_b.value
+                index_B = dut.sum_idx_enc.value
+
+
+                
+                await ClockCycles(dut.clk_100mhz, 1, rising=False)
+                
+                if (i+j<99):
+                    for l in range(2):
+                        # print("Correct number: ", b[i+j+l]%q)
+                        # print(bit_slice(value_B, l*16, l*16+15))
+
+                        assert b[i+j+l]%q == bit_slice(value_B, l*16, l*16+15), f"issue at {i}, {j}"
+
+                    # assert bit_slice(value_B, l*16, l*16+15) == something[l], "bro you screwed up"
+                    # if (index_B+l < len(output[h])):
+                        # output[h][index_B+l] += bit_slice(value_B, l*16, l*16+15)
+                        # output[h][index_B+l] %= q
+                # check that output of public_private is correct DONE
 
 def is_runner():
     """public private mult tester."""
