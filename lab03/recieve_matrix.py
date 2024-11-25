@@ -76,6 +76,22 @@ for i in range(500):
 
         assert s_info == val, f"s error at {i}, {j}"
 
+for i in range((1)*4):
+    bytes = ser.read()
+    val = int.from_bytes(bytes,'little')
+
+print("B IS HERE!!!!!!!!")
+
+for i in range(50*4):
+    print(f"B ====================== {i}")
+        # print(A[i][j])
+        # print(make_num(A[i][j//2:j//2+2], 16))
+        # ans = bit_slice(make_num(A[i][j//2:j//2+2], 16), j%2*8, j%2*8+7)
+        # print(ans)
+        # print(A[i][j//2])
+    bytes = ser.read()
+    val = int.from_bytes(bytes,'little')
+    print(val)
 
 '''val = int.from_bytes(bytes,'little')
 while(val == 0):

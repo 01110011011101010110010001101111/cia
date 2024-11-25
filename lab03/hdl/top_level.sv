@@ -26,7 +26,7 @@ module top_level
    logic transmit;
 
    logic [1:0] state;
-   assign state = {sw[2], sw[1]};
+   assign state = 2'b01;
 
    // these don't need to be 8-bit but uhhhh yes
    logic [7:0] q = 64;
@@ -273,6 +273,7 @@ module top_level
       if(sys_rst) begin
         a_valid_buffer_enc <= 0;
         a_valid_enc <= 0;
+        transmit <= 0;
       end else begin
         a_valid_buffer_enc <= addr_valid_enc;
         a_valid_enc <= a_valid_buffer_enc;
@@ -512,43 +513,43 @@ module top_level
         total_count <= 0;
         done_enc_buffer <= 0;
         done_enc_out <= 0;
-     end else if (transmit) begin
+     end else begin
      
      uart_rx_buf0 <= uart_rxd;
      uart_rx_buf1 <= uart_rx_buf0;
      new_data_out_buf <= four_new_data_out;
      data_byte_out_buf <= data_four_byte_out;
 
-     if (sw[0]) begin
-        if (!uart_busy) begin
-            case (idx)
-                2'b00: begin
-                    transmit_byte <= total_count < BRAM_DEPTH ? douta_A[7:0] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b;
-                    idx <= 2'b01;
-                end
-                2'b01: begin
-                    transmit_byte <= total_count < BRAM_DEPTH ? douta_A[7+8:8] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b;
-                    idx <= 2'b10;
-                end
-                2'b10: begin
-                    transmit_byte <= total_count < BRAM_DEPTH ? douta_A[7+16:16] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b;
-                    idx <= 2'b11;
-                end
-                2'b11: begin
-                    transmit_byte <= total_count < BRAM_DEPTH ? douta_A[7+24:24] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b;
-                    idx <= 2'b00;
-                    total_count <= total_count + 1;
-                end
-            endcase
-            uart_data_valid <= 1;//uart_transmit_buff;
-            // uart_transmit_buff <= 1;
-        end
-     end else begin
-        uart_data_valid <= 0;
-        total_count <= 0;
-        idx <= 0;
-        uart_transmit_buff <= 0;
-     end
+      if (sw[0] && transmit) begin
+          if (!uart_busy) begin
+              case (idx)
+                  2'b00: begin
+                      transmit_byte <= total_count < BRAM_DEPTH ? douta_A[7:0] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b;
+                      idx <= 2'b01;
+                  end
+                  2'b01: begin
+                      transmit_byte <= total_count < BRAM_DEPTH ? douta_A[7+8:8] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b;
+                      idx <= 2'b10;
+                  end
+                  2'b10: begin
+                      transmit_byte <= total_count < BRAM_DEPTH ? douta_A[7+16:16] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b;
+                      idx <= 2'b11;
+                  end
+                  2'b11: begin
+                      transmit_byte <= total_count < BRAM_DEPTH ? douta_A[7+24:24] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b;
+                      idx <= 2'b00;
+                      total_count <= total_count + 1;
+                  end
+              endcase
+              uart_data_valid <= 1;//uart_transmit_buff;
+              // uart_transmit_buff <= 1;
+          end
+      end else begin
+          uart_data_valid <= 0;
+          total_count <= 0;
+          idx <= 0;
+          uart_transmit_buff <= 0;
+      end
 
       // if (new_data_out) begin
       //     if (!has_prev_chunk) begin
