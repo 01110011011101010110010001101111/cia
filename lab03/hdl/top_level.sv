@@ -30,10 +30,13 @@ module top_level
 
    logic transmit;
 
-   logic [1:0] state;
-   //assign state[0] = sw[1];
-   //assign state[1] = sw[2];
-   assign state = 2'b01;
+   logic [1:0] state_tl;
+
+   always_ff @(posedge clk_100mhz) begin
+    state_tl[0] <= sw[1];
+    state_tl[1] <= sw[2];
+   end
+   // assign state = 2'b01;
  
     logic [7:0]                uart_data_in;
     logic                      uart_busy;
@@ -337,8 +340,8 @@ module top_level
      if (sys_rst) begin
         transmit <= 0;
      end else begin
-      if(state == 0) begin
-        transmit <= 0;
+      if(state_tl == 0) begin
+        transmit <= 1;
       end else begin
         transmit <= done_enc_out;
       end
@@ -346,7 +349,7 @@ module top_level
   end
 
     always_comb begin
-      case (state)
+      case (state_tl)
             2'b00: begin
                 addra_A = total_count;
                 addra_pt = total_count - BRAM_DEPTH;
