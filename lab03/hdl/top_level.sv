@@ -330,7 +330,7 @@ module top_level
      .b_valid(real_b_valid_enc),
      .b_in(douta_b),
      .sum_valid(sum_enc_valid),
-     .sum(dinb_b),
+     .sum(b_adder_out_enc),
      .sum_idx(sum_idx_enc),
      .h_in(h_out_ps_mult_enc),
       .h_out(b_adder_h_out_enc)
@@ -340,13 +340,178 @@ module top_level
      if (sys_rst) begin
         transmit <= 0;
      end else begin
-      if(state_tl == 0) begin
-        transmit <= 1;
-      end else begin
-        transmit <= done_enc_out;
+        case(state_tl)
+          2'b00: begin
+            transmit <= 1;
+          end
+          2'b01: begin
+            transmit <= done_enc_out;
+          end
+          2'b10: begin
+          end
+          2'b11: begin
+          end
+          default: begin
+          end
+        endcase
       end
+    end
+
+  // END ENC LOGIC
+
+  // BEGIN DEC LOGIC
+
+  logic [16:0] A_addr_dec;
+ logic [16:0] s_addr_dec;
+ logic [12:0] b_addr_dec_0;
+ logic [12:0] b_addr_dec;
+ logic [9:0] e_addr_dec;
+ logic e_zero_dec;
+ logic addr_valid_dec;
+
+
+ logic [9:0] s_idx_out_dec;
+ logic [9:0] a_idx_out_dec;
+ logic [9:0] k_idx_out_dec;
+
+
+ logic done_dec;
+ // logic [4:0] done_dec_buffer;
+ logic done_dec_out;
+  enc_addr_looper
+   #(.DEPTH(10), .K(500)) dec_addr_looper
+   //#(.DEPTH(10), .K(5)) dec_addr_looper
+   (.clk_in(clk_100mhz),
+    .rst_in(sys_rst),
+    .begin_enc(sw[0]),
+    .inner_N_out(s_idx_out_dec),
+    .outer_N_out(a_idx_out_dec),
+    .k_out(k_idx_out_dec),
+     .A_addr(A_addr_dec),
+     .s_addr(s_addr_dec),
+     .b_addr(b_addr_dec_0),
+     .e_addr(e_addr_dec),
+     .e_zero(e_zero_dec),
+     .addr_valid(addr_valid_dec),
+     .done(done_dec)
+   );
+
+
+   logic [9:0] idx_B_dec;
+   logic [47:0] B_out_dec;
+   logic B_valid_ps_mult_dec;
+
+
+   logic e_zero_buff_dec;
+   logic e_zero_dec_out;
+
+
+   logic a_valid_buffer_dec;
+   logic a_valid_dec;
+   logic real_b_valid_dec;
+
+
+   logic e_valid_buffer_dec;
+   logic e_valid_dec;
+
+
+   logic [9:0] a_idx_buffer_dec;
+   logic [9:0] a_idx_dec;
+
+
+   logic [9:0] s_idx_buffer_dec;
+   logic [9:0] s_idx_dec;
+
+
+   logic [9:0] h_idx_buffer_dec;
+   logic [9:0] h_idx_dec;
+
+
+   logic[9:0] idx_poly_out_dec;
+
+
+   logic [9:0] h_out_ps_mult_dec;
+
+
+   public_private_mm
+   #(.DEPTH(10))
+   dec_pub_sec_mm (.clk_in(clk_100mhz),
+                   .rst_in(sys_rst),
+                   .A_valid(a_valid_dec),
+                   .s_valid(a_valid_dec),
+                   .A_idx(a_idx_dec << 1),
+                   .s_idx(s_idx_dec << 1),
+                   .pk_A(douta_A),
+                   .sk_s(douta_sk),
+                   .idx_B(idx_poly_out_dec),
+                   .B_out(B_out_dec),
+                   .B_valid(B_valid_ps_mult_dec),
+                   .h_in(h_idx_dec),
+                   .h_out(h_out_ps_mult_dec)
+             );
+
+
+   // TODO: fake message buffer
+
+
+   always_ff @(posedge clk_100mhz) begin
+     if(sys_rst) begin
+       a_valid_buffer_dec <= 0;
+       a_valid_dec <= 0;
+     end else begin
+       a_valid_buffer_dec <= addr_valid_dec;
+       a_valid_dec <= a_valid_buffer_dec;
+       real_b_valid_dec <= a_valid_dec;
+
+
+       a_idx_buffer_dec <= a_idx_out_dec;
+       a_idx_dec <= a_idx_buffer_dec;
+
+
+       s_idx_buffer_dec <= s_idx_out_dec;
+       s_idx_dec <= s_idx_buffer_dec;
+
+
+       h_idx_buffer_dec <= k_idx_out_dec;
+       h_idx_dec <= h_idx_buffer_dec;
+
+
+       b_addr_dec <= b_addr_dec_0;
      end
-  end
+   end
+
+
+   logic sum_dec_valid;
+   logic [9:0] sum_idx_dec;
+   logic [9:0] b_adder_h_out_dec;
+
+   logic[31:0] b_adder_out_enc;
+   logic[31:0] b_adder_out_dec;
+
+
+   b_adder
+   #(.DEPTH(10), .ADD(0))
+   dec_b_sub (.clk_in(clk_100mhz),
+    .rst_in(sys_rst),
+    .poly_valid(B_valid_ps_mult_dec),
+    .poly_in(B_out_dec),
+    .poly_idx(idx_poly_out_dec),
+    .e_valid(1'b1),
+    .e_in(1'b0),
+    .b_idx(idx_poly_out_dec),
+    .b_valid(real_b_valid_dec),
+    .b_in(douta_b),
+    .sum_valid(sum_dec_valid),
+    .sum(b_adder_out_dec),
+    .sum_idx(sum_idx_dec),
+    .h_in(h_out_ps_mult_dec),
+     .h_out(b_adder_h_out_dec)
+             );
+  // END DEC LOGIC
+
+    logic[31:0] b_out_dec_rounded;
+    assign b_out_dec_rounded[15:0] = b_adder_out_dec[15:6]+b_adder_out_dec[5];
+    assign b_out_dec_rounded[31:16] = b_adder_out_dec[31:22]+b_adder_out_dec[21];
 
     always_comb begin
       case (state_tl)
@@ -372,11 +537,27 @@ module top_level
                 addra_b = b_addr_enc;
                 write_b_valid = sum_enc_valid;
                 addrb_b = sum_idx_enc>>1;
+                dinb_b = b_adder_out_enc;
                 // addrb_b = addrb - BRAM_DEPTH - PT_BRAM_DEPTH - SK_BRAM_DEPTH;
               end
             end
             2'b10: begin
-                
+                if (transmit) begin
+                addra_A = total_count;
+                addra_pt = total_count - BRAM_DEPTH;
+                addra_sk = (total_count - BRAM_DEPTH - PT_BRAM_DEPTH);
+                addra_b = total_count - BRAM_DEPTH - PT_BRAM_DEPTH - SK_BRAM_DEPTH;
+                // addrb_b = sum_idx_enc >> 1;
+              end else begin
+                addra_A = A_addr_dec;
+                addra_pt = e_addr_dec;
+                addra_sk = s_addr_dec;
+                addra_b = b_addr_dec;
+                write_b_valid = sum_dec_valid;
+                addrb_b = sum_idx_dec>>1;
+                dinb_b = b_out_dec_rounded;
+                // addrb_b = addrb - BRAM_DEPTH - PT_BRAM_DEPTH - SK_BRAM_DEPTH;
+              end
             end
             2'b11: begin
                 
