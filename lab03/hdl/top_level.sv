@@ -20,8 +20,8 @@ module top_level
    assign led[0] = sw[0];
 
    assign led[1] = transmit;
-   assign led[2] = done_enc;
-   assign led[3] = done_enc_out;
+   assign led[2] = done_dec;
+   assign led[3] = done_dec_out;
    assign led[15:4] = 0;
 
    //have btnd control system reset
@@ -311,6 +311,16 @@ module top_level
         .data_out(done_enc_out)
     );
 
+    pipeline #(
+      .BITS(1),
+      .STAGES(5)
+    ) done_dec_pipeline (
+        .clk_in(clk_100mhz),
+        .rst_in(sys_rst),
+        .data_in(done_dec),
+        .data_out(done_dec_out)
+    );
+
     logic[31:0] e_lsfr_simulator;
 
     logic sum_enc_valid;
@@ -348,6 +358,7 @@ module top_level
             transmit <= done_enc_out;
           end
           2'b10: begin
+            transmit <= done_dec_out;
           end
           2'b11: begin
           end
@@ -418,6 +429,9 @@ module top_level
    logic [9:0] a_idx_buffer_dec;
    logic [9:0] a_idx_dec;
 
+   logic [9:0] a_idx_dec_b0;
+   logic [9:0] a_idx_dec_b1;
+
 
    logic [9:0] s_idx_buffer_dec;
    logic [9:0] s_idx_dec;
@@ -454,6 +468,8 @@ module top_level
    // TODO: fake message buffer
 
 
+
+
    always_ff @(posedge clk_100mhz) begin
      if(sys_rst) begin
        a_valid_buffer_dec <= 0;
@@ -466,6 +482,8 @@ module top_level
 
        a_idx_buffer_dec <= a_idx_out_dec;
        a_idx_dec <= a_idx_buffer_dec;
+       a_idx_dec_b0 <= s_idx_dec;
+       a_idx_dec_b1 <= a_idx_dec_b0;// TODO: rename to s
 
 
        s_idx_buffer_dec <= s_idx_out_dec;
@@ -510,8 +528,10 @@ module top_level
   // END DEC LOGIC
 
     logic[31:0] b_out_dec_rounded;
-    assign b_out_dec_rounded[15:0] = b_adder_out_dec[15:6]+b_adder_out_dec[5];
-    assign b_out_dec_rounded[31:16] = b_adder_out_dec[31:22]+b_adder_out_dec[21];
+    assign b_out_dec_rounded[15:10] = 0;
+    assign b_out_dec_rounded[31:26] = 0;
+    assign b_out_dec_rounded[9:0] = b_adder_out_dec[15:6]+b_adder_out_dec[5];
+    assign b_out_dec_rounded[25:16] = b_adder_out_dec[31:22]+b_adder_out_dec[21];
 
     always_comb begin
       case (state_tl)
@@ -555,7 +575,7 @@ module top_level
                 addra_b = b_addr_dec;
                 write_b_valid = sum_dec_valid;
                 addrb_b = sum_idx_dec>>1;
-                dinb_b = b_out_dec_rounded;
+                dinb_b = (b_adder_h_out_dec == 499 && a_idx_dec_b1 == 0)?b_out_dec_rounded:b_adder_out_dec; // NEED NEW MODULE TO DO ROUNDING - maybe s = 0 and b = 499
                 // addrb_b = addrb - BRAM_DEPTH - PT_BRAM_DEPTH - SK_BRAM_DEPTH;
               end
             end

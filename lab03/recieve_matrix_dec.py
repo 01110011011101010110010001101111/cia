@@ -2,8 +2,8 @@ import serial
 import pickle
 import numpy as np
 
-N = 100
-p = 2**6
+N = 10
+p = 2**10
 q = 2**16
 
 SERIAL_PORT_NAME = "/dev/cu.usbserial-8874292300481"
@@ -52,6 +52,14 @@ def enc():
     # B %= q
     # print(B)
     return B
+
+def dec(B):
+    B_res = np.array(B)
+    for idx in range(len(A)):
+        B_res = B_res - np.array(polynomial_mult(A[idx], s[idx], N, q))
+    # can check bottom bits and add one if needed
+    #return np.round(B_res / (q / p))  % p
+    return B_res
 
 def make_num(list, bits):
     number = 0
