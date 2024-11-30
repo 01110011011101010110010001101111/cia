@@ -124,12 +124,16 @@ module top_level
     parameter PT_ADDR_WIDTH = $clog2(PT_BRAM_DEPTH);
 
     parameter SK_BRAM_WIDTH = 2; //1;
-    parameter SK_BRAM_DEPTH = 1 + 25_000; // 784_000; // 40_000 samples = 5 seconds of samples at 8kHz sample
+    parameter SK_BRAM_DEPTH = 1 + 250; // 784_000; // 40_000 samples = 5 seconds of samples at 8kHz sample
     parameter SK_ADDR_WIDTH = $clog2(SK_BRAM_DEPTH);
 
     parameter B_BRAM_WIDTH = 32; //1;
     parameter B_BRAM_DEPTH = 1 + 2_500; // 784_000; // 40_000 samples = 5 seconds of samples at 8kHz sample
     parameter B_ADDR_WIDTH = $clog2(B_BRAM_DEPTH);
+
+    parameter NN_BRAM_WIDTH = 3; //1;
+    parameter NN_BRAM_DEPTH = 1000; // 784_000; // 40_000 samples = 5 seconds of samples at 8kHz sample
+    parameter NN_ADDR_WIDTH = $clog2(NN_BRAM_DEPTH);
 
     parameter COUNT_SIZE = $clog2(BRAM_DEPTH + PT_BRAM_DEPTH + PT_BRAM_DEPTH + B_BRAM_DEPTH);
 
@@ -199,25 +203,24 @@ module top_level
   logic done_enc_out;
  
    enc_addr_looper
-    #(.DEPTH(100), .K(500)) enc_addr_looper
-    //#(.DEPTH(10), .K(5)) enc_addr_looper
-    (.clk_in(clk_100mhz),
-     .rst_in(sys_rst),
-     .begin_enc(sw[0]),
-     .inner_N_out(s_idx_out_enc),
-     .outer_N_out(a_idx_out_enc),
-     .k_out(k_idx_out_enc),
-      .A_addr(A_addr_enc),
-      .s_addr(s_addr_enc),
-      .b_addr(b_addr_enc_0),
-      .e_addr(e_addr_enc),
-      .e_zero(e_zero_enc),
-      .addr_valid(addr_valid_enc),
-      .done(done_enc)
-    );
+   #(.DEPTH(100), .K(500)) enc_addr_looper
+   //#(.DEPTH(10), .K(5)) enc_addr_looper
+   (.clk_in(clk_100mhz),
+    .rst_in(sys_rst),
+    .begin_enc(sw[0]),
+    .inner_N_out(a_idx_out_enc),
+    .k_out(k_idx_out_enc),
+     .A_addr(A_addr_enc),
+     .s_addr(s_addr_enc),
+     .b_addr(b_addr_enc_0),
+     .e_addr(e_addr_enc),
+     .e_zero(e_zero_enc),
+     .addr_valid(addr_valid_enc),
+     .done(done_enc)
+   );
 
     logic [9:0] idx_B_enc;
-    logic [47:0] B_out_enc;
+    logic [31:0] B_out_enc;
     logic B_valid_ps_mult_enc;
     logic [9:0] h_out;
 
@@ -252,7 +255,6 @@ module top_level
                     .A_valid(a_valid_enc),
                     .s_valid(a_valid_enc),
                     .A_idx(a_idx_enc << 1),
-                    .s_idx(s_idx_enc << 1),
                     .pk_A(douta_A),
                     .sk_s(douta_sk),
                     .idx_B(idx_poly_out_enc),
@@ -290,7 +292,7 @@ module top_level
         e_zero_buff_enc <= e_zero_enc;
         e_zero_enc_out <= e_zero_buff_enc;
 
-        e_lsfr_simulator[15:0] <= (e_zero_enc_out==1)?0:douta_pt[0]<<10; // TODO: Maybe should be 6
+        e_lsfr_simulator[15:0] <= (e_zero_enc_out==1)?0:douta_pt[0]<<6; // TODO: Maybe should be 6
         e_lsfr_simulator[31:16] <= (e_zero_enc_out==1)?0:douta_pt[1]<<10;
 
         /* done_enc_buffer[0] <= done_enc;
@@ -336,9 +338,9 @@ module top_level
      .poly_idx(idx_poly_out_enc),
      .e_valid(real_b_valid_enc),
      .e_in(e_lsfr_simulator),
-     .b_idx(idx_poly_out_enc),
-     .b_valid(real_b_valid_enc),
-     .b_in(douta_b),
+     // .b_idx(idx_poly_out_enc),
+     // .b_valid(real_b_valid_enc),
+     // .b_in(douta_b),
      .sum_valid(sum_enc_valid),
      .sum(b_adder_out_enc),
      .sum_idx(sum_idx_enc),
@@ -395,8 +397,7 @@ module top_level
    (.clk_in(clk_100mhz),
     .rst_in(sys_rst),
     .begin_enc(sw[0]),
-    .inner_N_out(s_idx_out_dec),
-    .outer_N_out(a_idx_out_dec),
+    .inner_N_out(a_idx_out_dec),
     .k_out(k_idx_out_dec),
      .A_addr(A_addr_dec),
      .s_addr(s_addr_dec),
@@ -409,7 +410,7 @@ module top_level
 
 
    logic [9:0] idx_B_dec;
-   logic [47:0] B_out_dec;
+   logic [31:0] B_out_dec;
    logic B_valid_ps_mult_dec;
 
 
@@ -454,7 +455,6 @@ module top_level
                    .A_valid(a_valid_dec),
                    .s_valid(a_valid_dec),
                    .A_idx(a_idx_dec << 1),
-                   .s_idx(s_idx_dec << 1),
                    .pk_A(douta_A),
                    .sk_s(douta_sk),
                    .idx_B(idx_poly_out_dec),
@@ -463,12 +463,6 @@ module top_level
                    .h_in(h_idx_dec),
                    .h_out(h_out_ps_mult_dec)
              );
-
-
-   // TODO: fake message buffer
-
-
-
 
    always_ff @(posedge clk_100mhz) begin
      if(sys_rst) begin
@@ -516,9 +510,9 @@ module top_level
     .poly_idx(idx_poly_out_dec),
     .e_valid(1'b1),
     .e_in(1'b0),
-    .b_idx(idx_poly_out_dec),
-    .b_valid(real_b_valid_dec),
-    .b_in(douta_b),
+    // .b_idx(idx_poly_out_dec),
+    // .b_valid(real_b_valid_dec),
+    // .b_in(douta_b),
     .sum_valid(sum_dec_valid),
     .sum(b_adder_out_dec),
     .sum_idx(sum_idx_dec),
@@ -526,6 +520,104 @@ module top_level
      .h_out(b_adder_h_out_dec)
              );
   // END DEC LOGIC
+
+  // BEGIN NN LOGIC
+
+  logic [9:0] nn_n_out;
+  logic [7:0] nn_k_out;
+  logic [5:0] nn_w_out;
+
+  logic [16:0] nn_A_addr;
+  logic [16:0] nn_nn_addr;
+  logic [12:0] nn_b_addr;
+
+  logic nn_addr_valid;
+  logic nn_done;
+
+  nn_addr_looper
+    #(.DEPTH(100), .K(502), .NN_OUT(10), .BOOTSTRAP(10)) nn_loop
+    ( .clk_in(clk_100mhz),
+      .rst_in(sys_rst),
+      .begin_nn(sw[0]),
+      .outer_N_out(nn_n_out),
+      .outer_k_out(nn_k_out),
+      .nn_out(nn_w_out),
+      .A_addr(nn_A_addr),
+      .nn_addr(nn_nn_addr),
+      .b_addr(nn_b_addr),
+      .addr_valid(nn_addr_valid),
+      .done(nn_done)
+    );
+
+  logic nn_valid_buff;
+  logic nn_valid_in_adder;
+
+  logic nn_n_out_buffer;
+  logic nn_k_out_buffer;
+  logic nn_w_out_buffer;
+
+  logic nn_n_out_in_adder;
+  logic nn_k_out_in_adder;
+  logic nn_w_out_in_adder;
+
+  logic [31:0] nn_sum_out;
+  logic [9:0] nn_sum_idx_k;
+  logic [9:0] nn_sum_idx_N;
+  logic [9:0] nn_sum_idx_w;
+  logic nn_store_valid;
+
+  nn_adder
+    #(.K_VAL(502),
+    .DEPTH(100), .OUT_NODES(10)) nn_adder
+    ( .clk_in(clk_100mhz),
+      .rst_in(sys_rst),
+      .data_valid(nn_valid_in_adder),
+      .idx_k_in(nn_k_out_in_adder), // 0 - 502/2
+      .idx_N_in(nn_n_out_in_adder), // 0 - 100
+      .ct_in(douta_A), // A
+      .weights_in(douta_nn),
+      .weights_idx(nn_w_out_in_adder), // 0-10
+      .mem_in(douta_b),
+
+      .sum_out(nn_sum_out),
+      .sum_idx_k(nn_sum_idx_k),
+      .sum_idx_N(nn_sum_idx_N),
+      .sum_idx_w(nn_sum_idx_w),
+      .sum_valid(nn_store_valid)
+    );
+
+  always_ff @(posedge clk_100mhz) begin
+     if(sys_rst) begin
+       nn_valid_buff <= 0;
+       nn_valid_in_adder <= 0;
+     end else begin
+       nn_valid_buff <= nn_addr_valid;
+       nn_valid_in_adder <= nn_valid_buff;
+
+       nn_n_out_buffer <= nn_n_out;
+       nn_n_out_in_adder <= nn_n_out_buffer;
+
+       nn_k_out_buffer <= nn_k_out;
+       nn_k_out_in_adder <= nn_k_out_buffer;
+
+       nn_w_out_buffer <= nn_w_out;
+       nn_w_out_in_adder <= nn_w_out_buffer;
+     end
+   end
+
+   logic done_nn_out;
+
+   pipeline #(
+      .BITS(1),
+      .STAGES(5)
+   ) done_nn_pipeline (
+        .clk_in(clk_100mhz),
+        .rst_in(sys_rst),
+        .data_in(nn_done),
+        .data_out(done_nn_out)
+    );
+
+  // END NN LOGIC
 
     logic[31:0] b_out_dec_rounded;
     assign b_out_dec_rounded[15:10] = 0;
@@ -580,7 +672,23 @@ module top_level
               end
             end
             2'b11: begin
-                
+              if (transmit) begin
+                addra_A = total_count;
+                addra_pt = total_count - BRAM_DEPTH;
+                addra_sk = (total_count - BRAM_DEPTH - PT_BRAM_DEPTH);
+                addra_b = total_count - BRAM_DEPTH - PT_BRAM_DEPTH - SK_BRAM_DEPTH;
+                // addrb_b = sum_idx_enc >> 1;
+              end else begin
+                addra_A = nn_A_addr;
+                // addra_pt = e_addr_enc;
+                // addra_sk = s_addr_enc;
+                addra_b = nn_b_addr;
+                addra_nn = nn_nn_addr;
+                write_b_valid = nn_store_valid;
+                addrb_b = nn_sum_idx_k + nn_sum_idx_w*251;
+                dinb_b = nn_sum_out;
+                // addrb_b = addrb - BRAM_DEPTH - PT_BRAM_DEPTH - SK_BRAM_DEPTH;
+              end
             end
             default: begin
             end
@@ -696,14 +804,37 @@ module top_level
 
 
  
-    // // Memory addressing
-    // // TODO: instantiate an event counter that increments once every 8000th of a second
-    // // for addressing the (port A) data we want to send out to LINE OUT!
-    // evt_counter #(.MAX_COUNT(BRAM_1_SIZE)) port_a_counter(
-    //      .clk_in(clk_100mhz),
-    //      .rst_in(sys_rst),
-    //      .evt_in(new_data_out_buf),
-    //      .count_out(total_count));
+  // only using port a for reads: we only use dout
+   logic [NN_BRAM_WIDTH-1:0]     douta_nn;
+   logic [NN_ADDR_WIDTH-1:0]     addra_nn;
+
+  // we never write to port b
+
+   xilinx_true_dual_port_read_first_2_clock_ram
+     #(.RAM_WIDTH(NN_BRAM_WIDTH),
+       .RAM_DEPTH(NN_BRAM_DEPTH),
+        .RAM_PERFORMANCE("HIGH_PERFORMANCE"),
+        .INIT_FILE(`FPATH(nn.mem))) nn_bram
+        (
+         // PORT A
+         .addra(addra_nn), // total_count < BRAM_1_SIZE ? total_count : BRAM_1_SIZE),
+         .dina(0), // we only use port A for reads!
+         .clka(clk_100mhz),
+         .wea(1'b0), // read only
+         .ena(1'b1),
+         .rsta(sys_rst),
+         .regcea(1'b1),
+         .douta(douta_nn),
+         // PORT B
+         .addrb(1'b0),
+         .dinb(1'b0),
+         .clkb(clk_100mhz),
+         .web(1'b0), // never write
+         .enb(1'b1),
+         .rstb(sys_rst),
+         .regceb(1'b1),
+         .doutb() 
+         );
  
  
  

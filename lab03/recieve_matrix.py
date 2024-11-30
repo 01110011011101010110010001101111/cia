@@ -3,6 +3,7 @@ import pickle
 import numpy as np
 
 N = 100
+k = 500
 p = 2**6
 q = 2**16
 
@@ -12,12 +13,13 @@ BAUD_RATE = 115200
 ser = serial.Serial(SERIAL_PORT_NAME,BAUD_RATE)
 print("Serial port initialized")
 
-with open('/Users/ruth/6.2050/fpga-project/Asm.pkl', 'rb') as f:
+with open('/Users/ruth/6.2050/fpga-project/enc_Asm.pkl', 'rb') as f:
     loaded_data = pickle.load(f)
 
 A = loaded_data["A"]
 s = loaded_data["s"]
 m = loaded_data["m"]
+# b = loaded_data["b"]
 
 # helper
 def polynomial_mult(s0, s1, size=N, base=q):
@@ -34,25 +36,25 @@ def polynomial_mult(s0, s1, size=N, base=q):
 
     return result
 
-def enc():
+def lwe_enc():
     # E = [1, 0, 1, -1] # \in q
+    LAMBDA = 64
     delta = q / p
     # print(delta, LAMBDA, delta/LAMBDA)
-    E = np.random.randint(0, 1, N)
+    E = np.random.randint(0, delta/LAMBDA, N)
     delta_m = np.array(m) * delta
 
-    B = np.array(delta_m) + np.array(E)
+    B = (np.array(delta_m) + E)
 
     # breakpoint()
-    for idx in range(len(A)):
-        B += np.array(polynomial_mult(A[idx], s[idx], N, q))
-        B %= q
+    for idx in range(N):
+        for j in range(k):
+            B[idx] += A[idx][j] * s[j]
+            B[idx] %= q
 
-    # B %= q
-    # print(B)
     return B
 
-correct_b = enc()
+correct_b = lwe_enc()
 
 def make_num(list, bits):
     number = 0
@@ -69,9 +71,9 @@ def bit_slice(number, start, end):
 
 print("Recording 100000 values:")
 ypoints = []
-for i in range(500):
-    for j in range(200):
-        print(f"====================== {i}, {j}")
+for i in range(100):
+    for j in range(1000):
+        print(f"A===================== {i}, {j}")
         # print(A[i][j])
         print(make_num(A[i][j//2:j//2+2], 16))
         ans = bit_slice(make_num(A[i][j//2:j//2+2], 16), j%2*8, j%2*8+7)
@@ -81,15 +83,15 @@ for i in range(500):
         val = int.from_bytes(bytes,'little')
         print(val)
 
-        # assert val == ans, f"{i}, {j} has error!"
+        assert val == ans, f"{i}, {j} has error!"
         
-for i in range(251*4):
+for i in range(251*4): # rest of A, useless rn
     bytes = ser.read()
     val = int.from_bytes(bytes,'little')
     print(val)
 
 for i in range(50*4):
-    print(f"====================== {i}")
+    print(f"m===================== {i}")
         # print(A[i][j])
         # print(make_num(A[i][j//2:j//2+2], 16))
         # ans = bit_slice(make_num(A[i][j//2:j//2+2], 16), j%2*8, j%2*8+7)
@@ -104,16 +106,15 @@ for i in range((1)*4):
     val = int.from_bytes(bytes,'little')
     # print(val)
 
-for i in range(500):
-    for j in range(200):
-        print(f"====================== {i}, {j}")
-        s_info = make_num(s[i][2*(j//4):2*(j//4)+2], 1)
-        print(s_info)
-        bytes = ser.read()
-        val = int.from_bytes(bytes,'little')
-        print(val)
-
-        # assert s_info == val, f"s error at {i}, {j}"
+#for i in range(100):
+for j in range(1000):
+    print(f"s===================== {i}, {j}")
+    s_info = make_num(s[2*(j//4):2*(j//4)+2], 1)
+    print(s_info)
+    bytes = ser.read()
+    val = int.from_bytes(bytes,'little')
+    print(val)
+    assert s_info == val, f"s error at {i}, {j}"
 
 for i in range((1)*4):
     bytes = ser.read()
