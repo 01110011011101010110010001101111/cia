@@ -9,7 +9,7 @@ module evt_counter
  
   always_ff @(posedge clk_in) begin
     if (rst_in) begin
-      count_out <= 16'b0;
+      count_out <= 0;
     end else if (evt_in) begin
       /* your code here */
       count_out <= count_out + 1 == MAX_COUNT ? 0 : count_out + 1;
