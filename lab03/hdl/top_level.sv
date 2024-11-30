@@ -120,7 +120,7 @@ module top_level
     parameter ADDR_WIDTH = $clog2(BRAM_DEPTH);
  
     parameter PT_BRAM_WIDTH = 2; // 1;
-    parameter PT_BRAM_DEPTH = 1 + 50; // 784; // 40_000 samples = 5 seconds of samples at 8kHz sample
+    parameter PT_BRAM_DEPTH = 1 + 100; // 784; // 40_000 samples = 5 seconds of samples at 8kHz sample
     parameter PT_ADDR_WIDTH = $clog2(PT_BRAM_DEPTH);
 
     parameter SK_BRAM_WIDTH = 2; //1;
@@ -208,8 +208,8 @@ module top_level
    (.clk_in(clk_100mhz),
     .rst_in(sys_rst),
     .begin_enc(sw[0]),
-    .inner_N_out(a_idx_out_enc),
-    .k_out(k_idx_out_enc),
+    .inner_k_out(a_idx_out_enc),
+    .N_out(k_idx_out_enc),
      .A_addr(A_addr_enc),
      .s_addr(s_addr_enc),
      .b_addr(b_addr_enc_0),
@@ -293,7 +293,7 @@ module top_level
         e_zero_enc_out <= e_zero_buff_enc;
 
         e_lsfr_simulator[15:0] <= (e_zero_enc_out==1)?0:douta_pt[0]<<6; // TODO: Maybe should be 6
-        e_lsfr_simulator[31:16] <= (e_zero_enc_out==1)?0:douta_pt[1]<<10;
+        // e_lsfr_simulator[31:16] <= (e_zero_enc_out==1)?0:douta_pt[1]<<10;
 
         /* done_enc_buffer[0] <= done_enc;
         for (int i_count = 1; i_count <= 4; i_count++) begin
@@ -339,8 +339,8 @@ module top_level
      .e_valid(real_b_valid_enc),
      .e_in(e_lsfr_simulator),
      // .b_idx(idx_poly_out_enc),
-     // .b_valid(real_b_valid_enc),
-     // .b_in(douta_b),
+     .b_valid(real_b_valid_enc),
+     .b_in(douta_b),
      .sum_valid(sum_enc_valid),
      .sum(b_adder_out_enc),
      .sum_idx(sum_idx_enc),
@@ -397,8 +397,8 @@ module top_level
    (.clk_in(clk_100mhz),
     .rst_in(sys_rst),
     .begin_enc(sw[0]),
-    .inner_N_out(a_idx_out_dec),
-    .k_out(k_idx_out_dec),
+    .inner_k_out(a_idx_out_dec),
+    .N_out(k_idx_out_dec),
      .A_addr(A_addr_dec),
      .s_addr(s_addr_dec),
      .b_addr(b_addr_dec_0),
@@ -511,8 +511,8 @@ module top_level
     .e_valid(1'b1),
     .e_in(1'b0),
     // .b_idx(idx_poly_out_dec),
-    // .b_valid(real_b_valid_dec),
-    // .b_in(douta_b),
+    .b_valid(real_b_valid_dec),
+    .b_in(douta_b),
     .sum_valid(sum_dec_valid),
     .sum(b_adder_out_dec),
     .sum_idx(sum_idx_dec),
@@ -646,9 +646,9 @@ module top_level
                 addra_A = A_addr_enc;
                 addra_pt = e_addr_enc;
                 addra_sk = s_addr_enc;
-                addra_b = b_addr_enc;
+                // addra_b = b_addr_enc;
                 write_b_valid = sum_enc_valid;
-                addrb_b = sum_idx_enc>>1;
+                addrb_b = b_adder_h_out_enc;//sum_idx_enc>>1;
                 dinb_b = b_adder_out_enc;
                 // addrb_b = addrb - BRAM_DEPTH - PT_BRAM_DEPTH - SK_BRAM_DEPTH;
               end

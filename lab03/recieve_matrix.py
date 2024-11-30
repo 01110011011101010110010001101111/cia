@@ -4,7 +4,7 @@ import numpy as np
 
 N = 100
 k = 500
-p = 2**6
+p = 2**10
 q = 2**16
 
 SERIAL_PORT_NAME = "/dev/cu.usbserial-8874292300481"
@@ -44,7 +44,7 @@ def lwe_enc():
     E = np.random.randint(0, delta/LAMBDA, N)
     delta_m = np.array(m) * delta
 
-    B = (np.array(delta_m) + E)
+    B = (np.array(delta_m))
 
     # breakpoint()
     for idx in range(N):
@@ -54,7 +54,16 @@ def lwe_enc():
 
     return B
 
+def dec_lwe(A, B, s, N=100):
+    for idx in range(N):
+        for j in range(k):
+            B[idx] -= A[idx][j] * s[j]
+            B %= q
+    # can check bottom bits and add one if needed
+    return np.round(B / (q / p)) % q
+
 correct_b = lwe_enc()
+print(correct_b)
 
 def make_num(list, bits):
     number = 0
@@ -90,7 +99,7 @@ for i in range(251*4): # rest of A, useless rn
     val = int.from_bytes(bytes,'little')
     print(val)
 
-for i in range(50*4):
+for i in range(100*4):
     print(f"m===================== {i}")
         # print(A[i][j])
         # print(make_num(A[i][j//2:j//2+2], 16))
@@ -124,7 +133,7 @@ print("B IS HERE!!!!!!!!")
 
 b = [0]*100
 
-for i in range(50*4):
+for i in range(100*4):
     print(f"B ====================== {i}")
         # print(A[i][j])
         # print(make_num(A[i][j//2:j//2+2], 16))
@@ -135,7 +144,7 @@ for i in range(50*4):
     val = int.from_bytes(bytes,'little')
     print(val)
 
-    b[i//2] += (val << (8*(i%2)))
+    b[i//4] += (val << (8*(i%2)))
 
 breakpoint()
 

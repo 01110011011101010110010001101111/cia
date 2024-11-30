@@ -103,7 +103,7 @@ async def test_top_level_public_private(dut):
     dut.sw[0].value = 0
     await Timer(10, units="ns")  # Small delay to observe the result'''
 
-@cocotb.test()
+'''@cocotb.test()
 async def test_top_level_b_adder(dut):
     """
     Test top level b_adder
@@ -154,7 +154,31 @@ async def test_top_level_b_adder(dut):
                     # if (index_B+l < len(output[h])):
                         # output[h][index_B+l] += bit_slice(value_B, l*16, l*16+15)
                         # output[h][index_B+l] %= q
-                # check that output of public_private is correct DONE
+                # check that output of public_private is correct DONE'''
+
+@cocotb.test()
+async def test_transmit(dut):
+    """
+    Test top level b_adder
+    """
+    b = [m_val<<10 for m_val in m]
+
+    dut._log.info("Starting...")
+    cocotb.start_soon(Clock(dut.clk_100mhz, 10, units="ns").start())
+
+    dut.btn[0].value = 1
+    dut.sw[0].value = 0
+    dut.sw[1].value = 1
+    dut.sw[2].value = 0
+    await ClockCycles(dut.clk_100mhz, 5, rising=False)
+    dut.btn[0].value = 0
+    await ClockCycles(dut.clk_100mhz, 1, rising=False)
+
+    dut.sw[0].value = 1
+    await ClockCycles(dut.clk_100mhz, 5, rising=False)
+    for h in range(2500):
+        await ClockCycles(dut.clk_100mhz, 1, rising=False)
+        # breakpoint()
 
 def is_runner():
     """public private mult tester."""

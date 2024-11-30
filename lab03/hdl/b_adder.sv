@@ -8,8 +8,8 @@ module b_adder
                     input wire e_valid,
                     input wire [31:0] e_in,
                     // input wire [9:0] b_idx,
-                    // input wire b_valid,
-                    // input wire [31:0] b_in,
+                    input wire b_valid,
+                    input wire [31:0] b_in,
                     output logic sum_valid,
                     output logic [31:0] sum,
                     output logic [9:0] sum_idx,
@@ -29,16 +29,19 @@ If ADD = 0, will subtract poly from b
             if (poly_valid && e_valid) begin
                 
                 // set sum to valid and store sum
-                sum_valid <= (h_in == K-1)?poly_valid && e_valid:0;
+                sum_valid <= 1; //(poly_idx == K-2)?0:1;
                 sum_idx <= poly_idx;
                 h_out <= h_in;
 
                 if (ADD == 1) begin
-                    sum[15:0] <= poly_in[15:0] + (h_in == 0)?0:sum[15:0] + e_in[15:0];
-                    sum[31:16] <= poly_in[31:16] + (h_in == 0)?0:sum[31:16] + e_in[31:16];
+                    sum[15:0] <= poly_in[15:0] + e_in[15:0] + poly_in[31:16] + e_in[31:16] + ((poly_idx == 0)?16'b0:sum[15:0]);
+
+                    // sum[15:0] <= poly_in[15:0] + e_in[15:0] + ((poly_idx == 0)?16'b0:sum[15:0]);
+                    sum[31:16] <= 16'b0;
                 end else begin
-                    sum[15:0] <= - poly_in[15:0] + sum[15:0];
-                    sum[31:16] <= - poly_in[31:16] + sum[31:16];
+                    sum[15:0] <= - poly_in[15:0] + ((poly_idx == 0)?16'b0:sum[15:0]) + ((poly_idx == 0)?b_in[15:0]:16'b0) - poly_in[31:16];
+                    sum[31:16] <= 16'b0;
+                    // sum[31:16] <= - poly_in[31:16] + ((poly_idx == 0)?16'b0:sum[31:16]) + ((poly_idx == 0)?b_in[31:16]:16'b0);
                 end
                 
             end else begin

@@ -5,7 +5,7 @@ module public_private_mm
                     input wire A_valid,
                     input wire s_valid,
                     input wire [9:0] A_idx,
-                    input wire [35:0] pk_A,
+                    input wire [31:0] pk_A,
                     input wire [1:0] sk_s,
                     output logic [9:0] idx_B,
                     output logic [31:0] B_out,
