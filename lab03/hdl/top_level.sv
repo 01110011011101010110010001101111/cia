@@ -666,8 +666,8 @@ module top_level
                 addra_sk = s_addr_dec;
                 addra_b = b_addr_dec;
                 write_b_valid = sum_dec_valid;
-                addrb_b = sum_idx_dec>>1;
-                dinb_b = (b_adder_h_out_dec == 499 && a_idx_dec_b1 == 0)?b_out_dec_rounded:b_adder_out_dec; // NEED NEW MODULE TO DO ROUNDING - maybe s = 0 and b = 499
+                addrb_b = b_adder_h_out_enc; //sum_idx_dec>>1;
+                dinb_b = (sum_idx_dec == 498)?b_out_dec_rounded:b_adder_out_dec; // NEED NEW MODULE TO DO ROUNDING - maybe s = 0 and b = 499
                 // addrb_b = addrb - BRAM_DEPTH - PT_BRAM_DEPTH - SK_BRAM_DEPTH;
               end
             end
