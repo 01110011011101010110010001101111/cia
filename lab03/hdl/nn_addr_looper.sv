@@ -38,7 +38,7 @@ module nn_addr_looper
          .evt_in((inner_nn_idx == NN_OUT -1) && ~bootstrap),
          .count_out(inner_k_idx));
 
-    evt_counter #(.MAX_COUNT(K)) outer_N_loop(
+    evt_counter #(.MAX_COUNT(DEPTH)) outer_N_loop(
          .clk_in(clk_in),
          .rst_in(rst_in),
          .evt_in((inner_nn_idx == NN_OUT -1) && (inner_k_idx == HALF_K -1) && ~bootstrap),

@@ -20,8 +20,8 @@ module top_level
    assign led[0] = sw[0];
 
    assign led[1] = transmit;
-   assign led[2] = done_dec;
-   assign led[3] = done_dec_out;
+   assign led[2] = nn_done;
+   assign led[3] = done_nn_out;
    assign led[15:4] = 0;
 
    //have btnd control system reset
@@ -128,7 +128,7 @@ module top_level
     parameter SK_ADDR_WIDTH = $clog2(SK_BRAM_DEPTH);
 
     parameter B_BRAM_WIDTH = 32; //1;
-    parameter B_BRAM_DEPTH = 1 + 2_500; // 784_000; // 40_000 samples = 5 seconds of samples at 8kHz sample
+    parameter B_BRAM_DEPTH = 1 + 2_510; // 784_000; // 40_000 samples = 5 seconds of samples at 8kHz sample
     parameter B_ADDR_WIDTH = $clog2(B_BRAM_DEPTH);
 
     parameter NN_BRAM_WIDTH = 3; //1;
@@ -363,6 +363,7 @@ module top_level
             transmit <= done_dec_out;
           end
           2'b11: begin
+            transmit <= done_nn_out;
           end
           default: begin
           end
@@ -552,13 +553,13 @@ module top_level
   logic nn_valid_buff;
   logic nn_valid_in_adder;
 
-  logic nn_n_out_buffer;
-  logic nn_k_out_buffer;
-  logic nn_w_out_buffer;
+  logic [9:0] nn_n_out_buffer;
+  logic [7:0] nn_k_out_buffer;
+  logic [5:0] nn_w_out_buffer;
 
-  logic nn_n_out_in_adder;
-  logic nn_k_out_in_adder;
-  logic nn_w_out_in_adder;
+  logic [9:0]nn_n_out_in_adder;
+  logic [7:0]nn_k_out_in_adder;
+  logic [5:0] nn_w_out_in_adder;
 
   logic [31:0] nn_sum_out;
   logic [9:0] nn_sum_idx_k;
