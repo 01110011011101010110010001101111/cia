@@ -70,8 +70,9 @@ module nn_addr_looper
                     if (outer_N_idx[1:0] == 2'b11 && inner_nn_idx == 0 && inner_k_idx == 0) begin
                         bootstrap <= 1;
                         addr_valid <= 0;
+                        // addr_valid <= addr_valid?(((inner_k_idx == HALF_K -1) && (inner_nn_idx == NN_OUT -1) && (outer_N_idx == DEPTH-1))? 0:1 ):begin_nn;
                     end else begin
-                        addr_valid <= addr_valid?(((inner_k_idx == HALF_K -1) && (inner_nn_idx == NN_OUT -1) && (outer_N_idx == DEPTH-1))? 0:1 ):begin_nn;
+                        addr_valid <= addr_valid?(((outer_k_out == HALF_K -1) && (nn_out == NN_OUT -1) && (outer_N_out == DEPTH-1))? 0:1 ):begin_nn;
                     end
 
                     A_addr <= (outer_N_idx * (HALF_K)) + inner_k_idx; // add 1 to everything???
@@ -81,7 +82,7 @@ module nn_addr_looper
                     outer_N_out <= outer_N_idx;
                     outer_k_out <= inner_k_idx;
                     nn_out <= inner_nn_idx;
-                    done <= ((inner_k_idx == HALF_K -1) && (inner_nn_idx == NN_OUT -1) && (outer_N_idx == DEPTH-1))? 1:0;
+                    done <= ((outer_k_out == HALF_K -1) && (nn_out == NN_OUT -1) && (outer_N_out == DEPTH-1))? 1:0;
                 end
                 
             end

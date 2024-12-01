@@ -610,7 +610,7 @@ module top_level
 
    pipeline #(
       .BITS(1),
-      .STAGES(5)
+      .STAGES(6)
    ) done_nn_pipeline (
         .clk_in(clk_100mhz),
         .rst_in(sys_rst),
@@ -678,6 +678,7 @@ module top_level
                 addra_pt = total_count - BRAM_DEPTH;
                 addra_sk = (total_count - BRAM_DEPTH - PT_BRAM_DEPTH);
                 addra_b = total_count - BRAM_DEPTH - PT_BRAM_DEPTH - SK_BRAM_DEPTH;
+                write_b_valid = 0;
                 // addrb_b = sum_idx_enc >> 1;
               end else begin
                 addra_A = nn_A_addr;
