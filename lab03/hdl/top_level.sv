@@ -135,6 +135,10 @@ module top_level
     parameter NN_BRAM_DEPTH = 1000; // 784_000; // 40_000 samples = 5 seconds of samples at 8kHz sample
     parameter NN_ADDR_WIDTH = $clog2(NN_BRAM_DEPTH);
 
+    parameter BIAS_BRAM_WIDTH = 3; //1;
+    parameter BIAS_BRAM_DEPTH = 10; // 784_000; // 40_000 samples = 5 seconds of samples at 8kHz sample
+    parameter BIAS_ADDR_WIDTH = $clog2(BIAS_BRAM_DEPTH);
+
     parameter COUNT_SIZE = $clog2(BRAM_DEPTH + PT_BRAM_DEPTH + PT_BRAM_DEPTH + B_BRAM_DEPTH);
 
 
@@ -579,6 +583,7 @@ module top_level
       .weights_in(douta_nn),
       .weights_idx(nn_w_out_in_adder), // 0-10
       .mem_in(douta_b),
+      .bias_in({douta_bias, 6'b0}),
 
       .sum_out(nn_sum_out),
       .sum_idx_k(nn_sum_idx_k),
@@ -689,6 +694,7 @@ module top_level
                 write_b_valid = nn_store_valid;
                 addrb_b = nn_sum_idx_k + nn_sum_idx_w*251;
                 dinb_b = nn_sum_out;
+                addra_bias = nn_w_out;
                 // addrb_b = addrb - BRAM_DEPTH - PT_BRAM_DEPTH - SK_BRAM_DEPTH;
               end
             end
@@ -827,6 +833,38 @@ module top_level
          .rsta(sys_rst),
          .regcea(1'b1),
          .douta(douta_nn),
+         // PORT B
+         .addrb(1'b0),
+         .dinb(1'b0),
+         .clkb(clk_100mhz),
+         .web(1'b0), // never write
+         .enb(1'b1),
+         .rstb(sys_rst),
+         .regceb(1'b1),
+         .doutb() 
+         );
+
+    // only using port a for reads: we only use dout
+   logic [BIAS_BRAM_WIDTH-1:0]     douta_bias;
+   logic [BIAS_ADDR_WIDTH-1:0]     addra_bias;
+
+  // we never write to port b
+
+   xilinx_true_dual_port_read_first_2_clock_ram
+     #(.RAM_WIDTH(BIAS_BRAM_WIDTH),
+       .RAM_DEPTH(BIAS_BRAM_DEPTH),
+        .RAM_PERFORMANCE("HIGH_PERFORMANCE"),
+        .INIT_FILE(`FPATH(biases.mem))) bias_bram
+        (
+         // PORT A
+         .addra(addra_bias), // total_count < BRAM_1_SIZE ? total_count : BRAM_1_SIZE),
+         .dina(0), // we only use port A for reads!
+         .clka(clk_100mhz),
+         .wea(1'b0), // read only
+         .ena(1'b1),
+         .rsta(sys_rst),
+         .regcea(1'b1),
+         .douta(douta_bias),
          // PORT B
          .addrb(1'b0),
          .dinb(1'b0),
