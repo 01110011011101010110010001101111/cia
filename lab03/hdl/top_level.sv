@@ -45,7 +45,7 @@ module top_level
    // TODO: instantiate your uart_receive module, connected up to the buffered uart_rx signal
    // declare any signals you need to keep track of!
  
-   logic [7:0] data_byte_out, prev_data_byte_out;
+   logic [7:0] prev_data_byte_out;
    logic [31:0] data_byte_out_buf;
    logic new_data_out, prev_new_data_out;
    logic new_data_out_3;
@@ -62,29 +62,7 @@ module top_level
      .data_byte_out(prev_data_byte_out)
     );
 
-   logic four_new_data_out;
-   logic [31:0] data_four_byte_out;
-
-   /*pipeline #(
-     .BITS(1),
-     .STAGES(4)
-   )new_data_out_pipeline (
-       .clk_in(clk_100mhz),
-       .rst_in(sys_rst),
-       .data_in(prev_new_data_out),
-       .data_out(new_data_out)
-   );
-
-   pipeline #(
-     .BITS(8),
-     .STAGES(4)
-   )new_data_out_pipeline_2 (
-       .clk_in(clk_100mhz),
-       .rst_in(sys_rst),
-       .data_in(prev_data_byte_out),
-       .data_out(data_byte_out)
-   );*/
-
+   logic [31:0] data_byte_out;
 
    compress_4 compress_four
    ( .clk_in(clk_100mhz),
@@ -111,11 +89,12 @@ module top_level
    // logic uart_busy = 0;
    // logic uart_data_valid;
 
-   parameter BRAM_WIDTH = 8; // 32;
-   parameter BRAM_DEPTH = 150_000; // 1 + 25_250;
+   parameter BRAM_WIDTH = 32; // 32;
+   parameter BRAM_DEPTH = 25_250; // 1 + 25_250;
    parameter ADDR_WIDTH = $clog2(BRAM_DEPTH);
 
    logic [7:0] transmit_byte;
+   logic [31:0] douta_A;
 
    xilinx_true_dual_port_read_first_2_clock_ram
      #(.RAM_WIDTH(BRAM_WIDTH),
@@ -131,7 +110,7 @@ module top_level
         .ena(1'b1),
         .rsta(sys_rst),
         .regcea(1'b1),
-        .douta(transmit_byte),
+        .douta(douta_A),
         // PORT B
         .addrb(total),
         .dinb(data_byte_out),
@@ -157,26 +136,61 @@ module top_level
      .tx_wire_out(uart_txd)
    );
  
+   logic [1:0] idx;
 
    always_ff @(posedge clk_100mhz)begin
     if (sys_rst) begin
+       idx <= 0;
        total_count <= 0;
     end else begin
         uart_rx_buf0 <= uart_rxd;
         uart_rx_buf1 <= uart_rx_buf0;
 
         if (sw[15]) begin
-          if (!uart_busy) begin
-            uart_data_valid <= 1;
-            total_count <= total_count + 1;
-          end 
-          // else begin
-          //   uart_data_valid <= 0;
-          // end
+           if (!uart_busy) begin
+              case (idx)
+                  2'b00: begin
+                      transmit_byte <= total_count < BRAM_DEPTH ? douta_A[7+24:24] : 0;
+                      idx <= 2'b01;
+                  end
+                  2'b01: begin
+                      transmit_byte <= total_count < BRAM_DEPTH ? douta_A[7+16:16] : 0;
+                      idx <= 2'b10;
+                  end
+                  2'b10: begin
+                      transmit_byte <= total_count < BRAM_DEPTH ? douta_A[7+8:8] : 0;
+                      idx <= 2'b11;
+                  end
+                  2'b11: begin
+                      transmit_byte <= total_count < BRAM_DEPTH ? douta_A[7+0:0] : 0;
+                      idx <= 2'b00;
+                      total_count <= total_count + 1;
+                  end
+              endcase
+              uart_data_valid <= 1;//uart_transmit_buff;
+              // uart_transmit_buff <= 1;
+           end
         end else begin
-           total_count <= 0;
-           uart_data_valid <= 0;
+            uart_data_valid <= 0;
+            total_count <= 0;
+            idx <= 0;
+            // uart_transmit_buff <= 0;
         end
+
+        // if (sw[15]) begin
+        //   if (!uart_busy) begin
+        //     uart_data_valid <= 1;
+        //     total_count <= total_count + 1;
+        //   end 
+        //   // else begin
+        //   //   uart_data_valid <= 0;
+        //   // end
+        // end else begin
+        //    total_count <= 0;
+        //    uart_data_valid <= 0;
+        // end
+
+        // TODO: RECIEVE DE-STACKING
 
     end
    end

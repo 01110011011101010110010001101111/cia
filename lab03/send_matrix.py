@@ -25,16 +25,14 @@ def send_matrix():
     idx = 0
     for row in A:
         for val in row:
-            byte1 = idx % 256
+            byte1 = idx % 256 # val >> 8
             idx += 1
-            for _ in range(4):
-                ser.write(int(byte1).to_bytes(1,'little'))
-                sleep(0.001)
-            byte2 = idx % 256
+            ser.write(int(byte1).to_bytes(1,'little'))
+            sleep(0.001)
+            byte2 = idx % 256 # val % 256
             idx += 1
-            for _ in range(4):
-                ser.write(int(byte2).to_bytes(1,'little'))
-                sleep(0.001)
+            ser.write(int(byte2).to_bytes(1,'little'))
+            sleep(0.001)
             # if idx >= 1:
             #     break
     print(idx)
