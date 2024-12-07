@@ -27,13 +27,21 @@ def send_matrix():
         for val in row:
             byte1 = idx % 256
             idx += 1
-            ser.write(int(1).to_bytes(1,'little'))
-            sleep(0.001)
+            for _ in range(4):
+                ser.write(int(byte1).to_bytes(1,'little'))
+                sleep(0.001)
             byte2 = idx % 256
             idx += 1
-            ser.write(int(2).to_bytes(1,'little'))
-            sleep(0.001)
+            for _ in range(4):
+                ser.write(int(byte2).to_bytes(1,'little'))
+                sleep(0.001)
+            # if idx >= 1:
+            #     break
     print(idx)
+    # for _ in range(int(0.375*idx)):
+    #     for _ in range(4):
+    #         ser.write(0)
+    #         sleep(0.001)
 
 if __name__ == "__main__":
     send_matrix()

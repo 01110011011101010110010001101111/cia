@@ -30,122 +30,155 @@ module top_level
    logic               sys_rst;
    assign sys_rst = btn[0];
 
-    logic [7:0]                uart_data_in;
-    logic                      uart_busy;
-    logic [$clog2(MAX_COUNT)-1:0] total;
-    logic [$clog2(MAX_COUNT)-1:0] total_count;
+   logic [7:0]                uart_data_in;
+   logic                      uart_busy;
+   logic [$clog2(MAX_COUNT)-1:0] total;
+   logic [$clog2(MAX_COUNT)-1:0] total_count;
  
-    // Checkoff 2: leave this stuff commented until you reach the second checkoff page!
-    // Synchronizer
-    // TODO: pass your uart_rx data through a couple buffers,
-    // save yourself the pain of metastability!
-    logic                      uart_rx_buf0, uart_rx_buf1;
+   // Checkoff 2: leave this stuff commented until you reach the second checkoff page!
+   // Synchronizer
+   // TODO: pass your uart_rx data through a couple buffers,
+   // save yourself the pain of metastability!
+   logic                      uart_rx_buf0, uart_rx_buf1;
  
-    // UART Receiver
-    // TODO: instantiate your uart_receive module, connected up to the buffered uart_rx signal
-    // declare any signals you need to keep track of!
+   // UART Receiver
+   // TODO: instantiate your uart_receive module, connected up to the buffered uart_rx signal
+   // declare any signals you need to keep track of!
  
-    logic [7:0] data_byte_out;
-    logic [31:0] data_byte_out_buf;
-    logic new_data_out;
-    logic new_data_out_3;
-    logic new_data_out_buf;
+   logic [7:0] data_byte_out, prev_data_byte_out;
+   logic [31:0] data_byte_out_buf;
+   logic new_data_out, prev_new_data_out;
+   logic new_data_out_3;
+   logic new_data_out_buf;
  
-    uart_receive
-    #(   .INPUT_CLOCK_FREQ(100_000_000), // 100 MHz
-         .BAUD_RATE(BAUD_RATE)
-    )my_uart_receive
-    ( .clk_in(clk_100mhz),
-      .rst_in(sys_rst),
-      .rx_wire_in(uart_rx_buf1),
-      .new_data_out(new_data_out),
-      .data_byte_out(data_byte_out)
-     );
-
-    logic [6:0] ss_c; //used to grab output cathode signal for 7s leds
-    logic [7:0] msg_byte;
-    seven_segment_controller mssc(.clk_in(clk_100mhz),
-                                  .rst_in(sys_rst),
-                                  .val_in(sw[15] ? total_count : total),
-                                  .cat_out(ss_c),
-                                  .an_out({ss0_an, ss1_an}));
-
-    assign ss0_c = ss_c; //control upper four digit's cathodes!
-    assign ss1_c = ss_c; //same as above but for lower four digits!
- 
-    logic valid_data;
-    logic valid_data_buf;
-    // logic uart_busy = 0;
-    // logic uart_data_valid;
-
-    parameter BRAM_WIDTH = 8; // 32;
-    parameter BRAM_DEPTH = 150_000; // 1 + 25_250;
-    parameter ADDR_WIDTH = $clog2(BRAM_DEPTH);
-
-    logic [7:0] transmit_byte;
-
-    xilinx_true_dual_port_read_first_2_clock_ram
-      #(.RAM_WIDTH(BRAM_WIDTH),
-        .RAM_DEPTH(BRAM_DEPTH),
-        .RAM_PERFORMANCE("HIGH_PERFORMANCE")) audio_bram
-        // .INIT_FILE(`FPATH(inc.mem))) audio_bram
-        (
-         // PORT A
-         .addra(total_count), // sw[14:0]),
-         .dina(0), // we only use port A for reads!
-         .clka(clk_100mhz),
-         .wea(1'b0), // read only
-         .ena(1'b1),
-         .rsta(sys_rst),
-         .regcea(1'b1),
-         .douta(transmit_byte),
-         // PORT B
-         .addrb(total),
-         .dinb(data_byte_out),
-         .clkb(clk_100mhz),
-         .web(new_data_out), // write always
-         .enb(1'b1),
-         .rstb(sys_rst),
-         .regceb(1'b1),
-         .doutb() // we only use port B for writes!
-         );
-
-    logic uart_data_valid;
- 
-    uart_transmit
-    #(  .INPUT_CLOCK_FREQ(100_000_000), // 100 MHz
+   uart_receive
+   #(   .INPUT_CLOCK_FREQ(100_000_000), // 100 MHz
         .BAUD_RATE(BAUD_RATE)
-    )my_uart_transmit
-    ( .clk_in(clk_100mhz),
-      .rst_in(sys_rst),
-      .data_byte_in(transmit_byte),
-      .trigger_in(uart_data_valid),
-      .busy_out(uart_busy),
-      .tx_wire_out(uart_txd)
+   )my_uart_receive
+   ( .clk_in(clk_100mhz),
+     .rst_in(sys_rst),
+     .rx_wire_in(uart_rx_buf1),
+     .new_data_out(prev_new_data_out),
+     .data_byte_out(prev_data_byte_out)
     );
+
+   logic four_new_data_out;
+   logic [31:0] data_four_byte_out;
+
+   /*pipeline #(
+     .BITS(1),
+     .STAGES(4)
+   )new_data_out_pipeline (
+       .clk_in(clk_100mhz),
+       .rst_in(sys_rst),
+       .data_in(prev_new_data_out),
+       .data_out(new_data_out)
+   );
+
+   pipeline #(
+     .BITS(8),
+     .STAGES(4)
+   )new_data_out_pipeline_2 (
+       .clk_in(clk_100mhz),
+       .rst_in(sys_rst),
+       .data_in(prev_data_byte_out),
+       .data_out(data_byte_out)
+   );*/
+
+
+   compress_4 compress_four
+   ( .clk_in(clk_100mhz),
+     .rst_in(sys_rst),
+     .valid_data_in(prev_new_data_out),
+     .data_in(prev_data_byte_out),
+     .valid_data_out(new_data_out),
+     .data_out(data_byte_out)
+   );
+
+   logic [6:0] ss_c; //used to grab output cathode signal for 7s leds
+   logic [7:0] msg_byte;
+   seven_segment_controller mssc(.clk_in(clk_100mhz),
+                                 .rst_in(sys_rst),
+                                 .val_in(sw[15] ? total_count : total),
+                                 .cat_out(ss_c),
+                                 .an_out({ss0_an, ss1_an}));
+
+   assign ss0_c = ss_c; //control upper four digit's cathodes!
+   assign ss1_c = ss_c; //same as above but for lower four digits!
+ 
+   logic valid_data;
+   logic valid_data_buf;
+   // logic uart_busy = 0;
+   // logic uart_data_valid;
+
+   parameter BRAM_WIDTH = 8; // 32;
+   parameter BRAM_DEPTH = 150_000; // 1 + 25_250;
+   parameter ADDR_WIDTH = $clog2(BRAM_DEPTH);
+
+   logic [7:0] transmit_byte;
+
+   xilinx_true_dual_port_read_first_2_clock_ram
+     #(.RAM_WIDTH(BRAM_WIDTH),
+       .RAM_DEPTH(BRAM_DEPTH),
+       .RAM_PERFORMANCE("HIGH_PERFORMANCE")) audio_bram
+       // .INIT_FILE(`FPATH(inc.mem))) audio_bram
+       (
+        // PORT A
+        .addra(total_count), // sw[14:0]),
+        .dina(0), // we only use port A for reads!
+        .clka(clk_100mhz),
+        .wea(1'b0), // read only
+        .ena(1'b1),
+        .rsta(sys_rst),
+        .regcea(1'b1),
+        .douta(transmit_byte),
+        // PORT B
+        .addrb(total),
+        .dinb(data_byte_out),
+        .clkb(clk_100mhz),
+        .web(1'b1), // write always
+        .enb(1'b1),
+        .rstb(sys_rst),
+        .regceb(1'b1),
+        .doutb() // we only use port B for writes!
+        );
+
+   logic uart_data_valid;
+ 
+   uart_transmit
+   #(  .INPUT_CLOCK_FREQ(100_000_000), // 100 MHz
+       .BAUD_RATE(BAUD_RATE)
+   )my_uart_transmit
+   ( .clk_in(clk_100mhz),
+     .rst_in(sys_rst),
+     .data_byte_in(transmit_byte),
+     .trigger_in(uart_data_valid),
+     .busy_out(uart_busy),
+     .tx_wire_out(uart_txd)
+   );
  
 
-    always_ff @(posedge clk_100mhz)begin
-     if (sys_rst) begin
-        total_count <= 0;
-     end else begin
-         uart_rx_buf0 <= uart_rxd;
-         uart_rx_buf1 <= uart_rx_buf0;
+   always_ff @(posedge clk_100mhz)begin
+    if (sys_rst) begin
+       total_count <= 0;
+    end else begin
+        uart_rx_buf0 <= uart_rxd;
+        uart_rx_buf1 <= uart_rx_buf0;
 
-         if (sw[15]) begin
-           if (!uart_busy) begin
-             uart_data_valid <= 1;
-             total_count <= total_count + 1;
-           end 
-           // else begin
-           //   uart_data_valid <= 0;
-           // end
-         end else begin
-            total_count <= 0;
-            uart_data_valid <= 0;
-         end
+        if (sw[15]) begin
+          if (!uart_busy) begin
+            uart_data_valid <= 1;
+            total_count <= total_count + 1;
+          end 
+          // else begin
+          //   uart_data_valid <= 0;
+          // end
+        end else begin
+           total_count <= 0;
+           uart_data_valid <= 0;
+        end
 
-     end
+    end
    end
  
    evt_counter #(.MAX_COUNT(MAX_COUNT)) port_b_counter(

@@ -38,8 +38,10 @@ module compress_4
                 four_bytes <= 0;
                 count_out <= 2'b00;
             end
+            default: begin
+                valid_data_out <= 0;
+            end
         endcase
-        
     end else begin
         valid_data_out <= 0;
     end

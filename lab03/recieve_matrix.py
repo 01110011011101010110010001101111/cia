@@ -33,7 +33,9 @@ idx = 0
 while True:
     print(idx, int.from_bytes(ser.read(),'little'))
     idx += 1
-
+    if idx > 100_100:
+        break
+"""
 idx = 0
 for row in A:
     for val in row:
@@ -211,3 +213,4 @@ for row in A:
 # # Close the serial port
 # ser.close()
 # 
+"""
