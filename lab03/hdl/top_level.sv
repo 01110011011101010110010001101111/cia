@@ -18,7 +18,8 @@ module top_level
    output logic 			 uart_txd // UART FPGA-computer
 );
 
-   parameter BAUD_RATE = 115_200;
+   parameter BAUD_RATE = 100_000; // 115_200;
+   parameter MAX_COUNT = 150_000; // reading all 100k 
 
    //shut up those rgb LEDs for now (active high):
    assign rgb1 = 0; //set to 0.
@@ -31,6 +32,8 @@ module top_level
 
     logic [7:0]                uart_data_in;
     logic                      uart_busy;
+    logic [$clog2(MAX_COUNT)-1:0] total;
+    logic [$clog2(MAX_COUNT)-1:0] total_count;
  
     // Checkoff 2: leave this stuff commented until you reach the second checkoff page!
     // Synchronizer
@@ -50,8 +53,7 @@ module top_level
  
     uart_receive
     #(   .INPUT_CLOCK_FREQ(100_000_000), // 100 MHz
-         //.BAUD_RATE(10_000_000)
-        .BAUD_RATE(BAUD_RATE)
+         .BAUD_RATE(BAUD_RATE)
     )my_uart_receive
     ( .clk_in(clk_100mhz),
       .rst_in(sys_rst),
@@ -60,24 +62,97 @@ module top_level
       .data_byte_out(data_byte_out)
      );
 
-     logic [6:0] ss_c; //used to grab output cathode signal for 7s leds
-     seven_segment_controller mssc(.clk_in(clk_100mhz),
-                                   .rst_in(sys_rst),
-                                   .val_in(data_byte_out),
-                                   .cat_out(ss_c),
-                                   .an_out({ss0_an, ss1_an}));
+    logic [6:0] ss_c; //used to grab output cathode signal for 7s leds
+    logic [7:0] msg_byte;
+    seven_segment_controller mssc(.clk_in(clk_100mhz),
+                                  .rst_in(sys_rst),
+                                  .val_in(sw[15] ? total_count : total),
+                                  .cat_out(ss_c),
+                                  .an_out({ss0_an, ss1_an}));
 
-     assign ss0_c = ss_c; //control upper four digit's cathodes!
-     assign ss1_c = ss_c; //same as above but for lower four digits!
+    assign ss0_c = ss_c; //control upper four digit's cathodes!
+    assign ss1_c = ss_c; //same as above but for lower four digits!
+ 
+    logic valid_data;
+    logic valid_data_buf;
+    // logic uart_busy = 0;
+    // logic uart_data_valid;
+
+    parameter BRAM_WIDTH = 8; // 32;
+    parameter BRAM_DEPTH = 150_000; // 1 + 25_250;
+    parameter ADDR_WIDTH = $clog2(BRAM_DEPTH);
+
+    logic [7:0] transmit_byte;
+
+    xilinx_true_dual_port_read_first_2_clock_ram
+      #(.RAM_WIDTH(BRAM_WIDTH),
+        .RAM_DEPTH(BRAM_DEPTH),
+        .RAM_PERFORMANCE("HIGH_PERFORMANCE")) audio_bram
+        // .INIT_FILE(`FPATH(inc.mem))) audio_bram
+        (
+         // PORT A
+         .addra(total_count), // sw[14:0]),
+         .dina(0), // we only use port A for reads!
+         .clka(clk_100mhz),
+         .wea(1'b0), // read only
+         .ena(1'b1),
+         .rsta(sys_rst),
+         .regcea(1'b1),
+         .douta(transmit_byte),
+         // PORT B
+         .addrb(total),
+         .dinb(data_byte_out),
+         .clkb(clk_100mhz),
+         .web(new_data_out), // write always
+         .enb(1'b1),
+         .rstb(sys_rst),
+         .regceb(1'b1),
+         .doutb() // we only use port B for writes!
+         );
+
+    logic uart_data_valid;
+ 
+    uart_transmit
+    #(  .INPUT_CLOCK_FREQ(100_000_000), // 100 MHz
+        .BAUD_RATE(BAUD_RATE)
+    )my_uart_transmit
+    ( .clk_in(clk_100mhz),
+      .rst_in(sys_rst),
+      .data_byte_in(transmit_byte),
+      .trigger_in(uart_data_valid),
+      .busy_out(uart_busy),
+      .tx_wire_out(uart_txd)
+    );
  
 
     always_ff @(posedge clk_100mhz)begin
      if (sys_rst) begin
+        total_count <= 0;
      end else begin
          uart_rx_buf0 <= uart_rxd;
          uart_rx_buf1 <= uart_rx_buf0;
+
+         if (sw[15]) begin
+           if (!uart_busy) begin
+             uart_data_valid <= 1;
+             total_count <= total_count + 1;
+           end 
+           // else begin
+           //   uart_data_valid <= 0;
+           // end
+         end else begin
+            total_count <= 0;
+            uart_data_valid <= 0;
+         end
+
      end
    end
+ 
+   evt_counter #(.MAX_COUNT(MAX_COUNT)) port_b_counter(
+        .clk_in(clk_100mhz),
+        .rst_in(sys_rst),
+        .evt_in(new_data_out),
+        .count_out(total));
  
 
 endmodule // top_level

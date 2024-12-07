@@ -7,7 +7,7 @@ from time import sleep
 # 29501
 
 SERIAL_PORT_NAME = "/dev/cu.usbserial-88742923009C1"
-BAUD_RATE = 115_200
+BAUD_RATE = 100_000 
 
 ser = serial.Serial(SERIAL_PORT_NAME,BAUD_RATE)
 print("Serial port initialized")
@@ -29,8 +29,10 @@ m = loaded_data["m"]
 # assert int.from_bytes(ser.read(),'little') == 0 
 # assert int.from_bytes(ser.read(),'little') == 0 
 
+idx = 0
 while True:
-    print(int.from_bytes(ser.read(),'little'))
+    print(idx, int.from_bytes(ser.read(),'little'))
+    idx += 1
 
 idx = 0
 for row in A:
