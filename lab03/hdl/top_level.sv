@@ -13,107 +13,8 @@ module top_level
    input wire 				 uart_rxd, // UART computer-FPGA
    output logic 			 uart_txd // UART FPGA-computer
 );
+   parameter BAUD_RATE = 100_000; // 115_200;
 
-   //shut up those rgb LEDs for now (active high):
-   assign rgb1 = 0; //set to 0.
-   assign rgb0 = 0; //set to 0.
-   assign led[0] = sw[0];
-
-   assign led[1] = transmit;
-   assign led[2] = nn_done;
-   assign led[3] = done_nn_out;
-   assign led[15:4] = 0;
-
-   //have btnd control system reset
-   logic               sys_rst;
-   assign sys_rst = btn[0];
-
-   logic transmit;
-
-   logic [1:0] state_tl;
-
-   always_ff @(posedge clk_100mhz) begin
-    state_tl[0] <= sw[1];
-    state_tl[1] <= sw[2];
-   end
-   // assign state = 2'b01;
- 
-    logic [7:0]                uart_data_in;
-    logic                      uart_busy;
- 
-    // Checkoff 2: leave this stuff commented until you reach the second checkoff page!
-    // Synchronizer
-    // TODO: pass your uart_rx data through a couple buffers,
-    // save yourself the pain of metastability!
-    logic                      uart_rx_buf0, uart_rx_buf1;
- 
-    // UART Receiver
-    // TODO: instantiate your uart_receive module, connected up to the buffered uart_rx signal
-    // declare any signals you need to keep track of!
- 
-    logic [7:0] data_byte_out;
-    logic [31:0] data_byte_out_buf;
-    logic new_data_out;
-    logic new_data_out_3;
-    logic new_data_out_buf;
- 
-    uart_receive
-    #(   .INPUT_CLOCK_FREQ(100_000_000), // 100 MHz
-         //.BAUD_RATE(10_000_000)
-        .BAUD_RATE(115_200)
-    )my_uart_receive
-    ( .clk_in(clk_100mhz),
-      .rst_in(sys_rst),
-      .rx_wire_in(uart_rx_buf1),
-      .new_data_out(new_data_out),
-      .data_byte_out(data_byte_out)
-     );
-
-     logic four_new_data_out;
-     logic [31:0] data_four_byte_out;
-
-    compress_4 compress_four
-    ( .clk_in(clk_100mhz),
-      .rst_in(sys_rst),
-      .valid_data_in(new_data_out),
-      .data_in(data_byte_out),
-      .valid_data_out(four_new_data_out),
-      .data_out(data_four_byte_out)
-     );
-
-    pipeline #(
-      .BITS(1),
-      .STAGES(4)
-    )new_data_out_pipeline (
-        .clk_in(clk_100mhz),
-        .rst_in(sys_rst),
-        .data_in(four_new_data_out),
-        .data_out(new_data_out_3)
-    );
-
-    // UART Transmitter to FTDI2232
-    // TODO: instantiate the UART transmitter you just wrote, using the input signals from above.
-
-    logic [7:0] transmit_byte;
-    logic uart_data_valid;
- 
-    uart_transmit
-    #(  .INPUT_CLOCK_FREQ(100_000_000), // 100 MHz
-        .BAUD_RATE(115_200)
-        //.BAUD_RATE(10_000_000)
-    )my_uart_transmit
-    ( .clk_in(clk_100mhz),
-      .rst_in(sys_rst),
-      .data_byte_in(transmit_byte), // douta_pt),
-      .trigger_in(uart_data_valid),
-      .busy_out(uart_busy),
-      .tx_wire_out(uart_txd)
-    );
- 
-   // logic [8:0] prev_chunk = 0;
-   // logic [16:0] full_chunk = 0;
-   // logic has_prev_chunk = 0;
-   // logic full_chunk_valid = 0;
 
     parameter BRAM_WIDTH = 32;
     parameter BRAM_DEPTH = 1 + 25_250;
@@ -139,14 +40,94 @@ module top_level
     parameter BIAS_BRAM_DEPTH = 10; // 784_000; // 40_000 samples = 5 seconds of samples at 8kHz sample
     parameter BIAS_ADDR_WIDTH = $clog2(BIAS_BRAM_DEPTH);
 
-    parameter COUNT_SIZE = $clog2(BRAM_DEPTH + PT_BRAM_DEPTH + PT_BRAM_DEPTH + B_BRAM_DEPTH);
+   parameter MAX_COUNT = BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH + B_BRAM_DEPTH; // reading all 100k
+
+   // logic [6:0] ss_c; //used to grab output cathode signal for 7s leds
+   // logic [7:0] msg_byte;
+   // seven_segment_controller mssc(.clk_in(clk_100mhz),
+   //                               .rst_in(sys_rst),
+   //                               .val_in(total_count),
+   //                               .cat_out(ss_c),
+   //                               .an_out({ss0_an, ss1_an}));
+
+   //shut up those rgb LEDs for now (active high):
+   assign rgb1 = 0; //set to 0.
+   assign rgb0 = 0; //set to 0.
+   assign led[0] = sw[0];
+
+   assign led[1] = transmit;
+   assign led[2] = nn_done;
+   assign led[3] = done_nn_out;
+   assign led[15:4] = 0;
+
+   //have btnd control system reset
+   logic               sys_rst;
+   assign sys_rst = btn[0];
+
+   logic transmit;
+
+   logic [1:0] state_tl;
+
+   always_ff @(posedge clk_100mhz) begin
+    state_tl[0] <= sw[1];
+    state_tl[1] <= sw[2];
+   end
+   // assign state = 2'b01;
 
 
-    // 8+8+4 = 20 max (can technically do a tighter bound but so be it)
-    logic [COUNT_SIZE:0] total_count;
-    // localparam BRAM_1_SIZE = 40; // MUST CHANGE
-    // localparam BRAM_2_SIZE = 40; // MUST CHANGE
+   logic [7:0] prev_data_byte_out;
+   logic [31:0] data_byte_out_buf;
+   logic new_data_out, prev_new_data_out;
+   logic new_data_out_3;
+   logic new_data_out_buf;
+   logic                      uart_rx_buf0, uart_rx_buf1;
+
+   logic [7:0]                uart_data_in;
+   logic                      uart_busy;
+   logic [$clog2(MAX_COUNT)-1:0] total;
+   logic [$clog2(MAX_COUNT)-1:0] total_count;
+
+
+   uart_receive
+   #(   .INPUT_CLOCK_FREQ(100_000_000), // 100 MHz
+        .BAUD_RATE(BAUD_RATE)
+   )my_uart_receive
+   ( .clk_in(clk_100mhz),
+     .rst_in(sys_rst),
+     .rx_wire_in(uart_rx_buf1),
+     .new_data_out(prev_new_data_out),
+     .data_byte_out(prev_data_byte_out)
+    );
+
+   logic [31:0] data_byte_out;
+
+   compress_4 compress_four
+   ( .clk_in(clk_100mhz),
+     .rst_in(sys_rst),
+     .valid_data_in(prev_new_data_out),
+     .data_in(prev_data_byte_out),
+     .valid_data_out(new_data_out),
+     .data_out(data_byte_out)
+   );
+
+    // UART Transmitter to FTDI2232
+    // TODO: instantiate the UART transmitter you just wrote, using the input signals from above.
+
+    logic [7:0] transmit_byte;
+    logic uart_data_valid;
  
+    uart_transmit
+    #(  .INPUT_CLOCK_FREQ(100_000_000), // 100 MHz
+        .BAUD_RATE(BAUD_RATE)
+        //.BAUD_RATE(10_000_000)
+    )my_uart_transmit
+    ( .clk_in(clk_100mhz),
+      .rst_in(sys_rst),
+      .data_byte_in(transmit_byte), // douta_pt),
+      .trigger_in(uart_data_valid),
+      .busy_out(uart_busy),
+      .tx_wire_out(uart_txd)
+    );
  
     // BRAM Memory
     // We've configured this for you, but you'll need to hook up your address and data ports to the rest of your logic!
@@ -177,14 +158,14 @@ module top_level
          .regcea(1'b1),
          .douta(douta_A),
          // PORT B
-         .addrb(addrb_A),
-         .dinb(data_byte_out_buf),
-         .clkb(clk_100mhz),
-         .web(new_data_out_buf && addrb_A < BRAM_DEPTH), // write always
-         .enb(1'b1),
-         .rstb(sys_rst),
-         .regceb(1'b1),
-         .doutb() // we only use port B for writes!
+        .addrb(total),
+        .dinb(data_byte_out),
+        .clkb(clk_100mhz),
+        .web(total < BRAM_DEPTH), // write always
+        .enb(1'b1),
+        .rstb(sys_rst),
+        .regceb(1'b1),
+        .doutb() // we only use port B for writes!
          );
 
 
@@ -727,14 +708,14 @@ module top_level
          .regcea(1'b1),
          .douta(douta_pt),
          // PORT B
-         .addrb(addrb - BRAM_DEPTH),
-         .dinb(data_byte_out_buf),
-         .clkb(clk_100mhz),
-         .web(new_data_out_buf && addrb >= BRAM_DEPTH && addrb < BRAM_DEPTH + PT_BRAM_DEPTH), // write always
-         .enb(1'b1),
-         .rstb(sys_rst),
-         .regceb(1'b1),
-         .doutb() // we only use port B for writes!
+       .addrb(total - BRAM_DEPTH),
+       .dinb(data_byte_out),
+       .clkb(clk_100mhz),
+       .web(total >= BRAM_DEPTH && total < BRAM_DEPTH + PT_BRAM_DEPTH), // write always
+       .enb(1'b1),
+       .rstb(sys_rst),
+       .regceb(1'b1),
+       .doutb() // we only use port B for writes!
          );
 
 
@@ -763,10 +744,10 @@ module top_level
         .regcea(1'b1),
         .douta(douta_sk),
          // PORT B
-         .addrb(addrb - BRAM_DEPTH - PT_BRAM_DEPTH),
-         .dinb(data_byte_out_buf),
+         .addrb(total - BRAM_DEPTH - PT_BRAM_DEPTH),
+         .dinb(data_byte_out),
          .clkb(clk_100mhz),
-         .web(new_data_out_buf && addrb >= BRAM_DEPTH + PT_BRAM_DEPTH && addrb < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH), // write always
+         .web(total >= BRAM_DEPTH + PT_BRAM_DEPTH && total < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH),
          .enb(1'b1),
          .rstb(sys_rst),
          .regceb(1'b1),
@@ -799,10 +780,10 @@ module top_level
         .regcea(1'b1),
         .douta(douta_b),
          // PORT B
-         .addrb(addrb_b),
-         .dinb(dinb_b), //(data_byte_out_buf),
+         .addrb(total - BRAM_DEPTH - PT_BRAM_DEPTH - SK_BRAM_DEPTH),
+         .dinb(data_byte_out),
          .clkb(clk_100mhz),
-         .web(write_b_valid),//(new_data_out_buf && addrb >= BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH && addrb < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH + B_BRAM_DEPTH), // write always
+         .web(total >= BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH && total < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH + B_BRAM_DEPTH),
          .enb(1'b1),
          .rstb(sys_rst),
          .regceb(1'b1),
@@ -878,15 +859,12 @@ module top_level
  
  
  
-    // TODO: instantiate another event counter that increments with each new UART data byte
-    // for addressing the (port B) place to send our UART_RX data!
-    evt_counter #(.MAX_COUNT(BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH + B_BRAM_DEPTH)) port_b_counter(
-    // evt_counter #(.MAX_COUNT(BRAM_DEPTH)) port_b_counter(
-         .clk_in(clk_100mhz),
-         .rst_in(sys_rst),
-         .evt_in(four_new_data_out),
-         .count_out(addrb));
- 
+    evt_counter #(.MAX_COUNT(MAX_COUNT)) port_b_counter(
+        .clk_in(clk_100mhz),
+        .rst_in(sys_rst),
+        .evt_in(new_data_out),
+        .count_out(total));
+
     // reminder TODO: go up to your PWM module, wire up the speaker to play the data from port A dout.
 
    logic [1:0] idx;
@@ -900,8 +878,6 @@ module top_level
      
      uart_rx_buf0 <= uart_rxd;
      uart_rx_buf1 <= uart_rx_buf0;
-     new_data_out_buf <= four_new_data_out;
-     data_byte_out_buf <= data_four_byte_out;
 
       if (sw[0] && transmit) begin
           if (!uart_busy) begin
