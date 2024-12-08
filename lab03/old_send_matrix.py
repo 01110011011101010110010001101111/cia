@@ -38,7 +38,6 @@ def send_matrix():
         byte1 = idx % 256
         ser.write(int(byte1).to_bytes(1,'little'))
         sleep(0.001)
-        print(byte1)
 
     for idx in range((100 + 1)):
         byte1 = idx % 256

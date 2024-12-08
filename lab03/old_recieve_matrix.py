@@ -50,7 +50,8 @@ for idx in range((250 + 1)):
 for idx in range(4*(2_510)):
     byte1 = idx % 256
     assert byte1 == int.from_bytes(ser.read(),'little')
- 
+
+
 
 # idx = 0
 # while True:

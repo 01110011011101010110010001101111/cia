@@ -14,6 +14,7 @@ module compress_4
     if (rst_in) begin
       four_bytes <= 32'b0;
       count_out <= 0;
+      valid_data_out <= 0;
     end else if (valid_data_in) begin
         case (count_out)
             2'b00: begin
