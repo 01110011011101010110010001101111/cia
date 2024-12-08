@@ -8,7 +8,7 @@ p = 2**10
 q = 2**16
 
 SERIAL_PORT_NAME = "/dev/cu.usbserial-8874292300481"
-BAUD_RATE = 115200 
+BAUD_RATE = 100000 
 
 ser = serial.Serial(SERIAL_PORT_NAME,BAUD_RATE)
 print("Serial port initialized")
@@ -64,8 +64,8 @@ def dec_lwe(A, B, s, N=100):
 
 
 print(m)
-ans = dec_lwe(A, b_new, s, N=10)
-print(ans)
+# ans = dec_lwe(A, b_new, s, N=10)
+# print(ans)
 
 def make_num(list, bits):
     number = 0
