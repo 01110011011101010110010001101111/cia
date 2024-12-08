@@ -162,7 +162,7 @@ module top_level
         .addrb(total),
         .dinb(data_byte_out),
         .clkb(clk_100mhz),
-        .web(total < BRAM_DEPTH), // write always
+        .web(state_tl == 3'b100 && total < BRAM_DEPTH), // write always
         .enb(1'b1),
         .rstb(sys_rst),
         .regceb(1'b1),
@@ -681,7 +681,7 @@ module top_level
               end
             end
             3'b100: begin
-              write_b_valid = state_tl == 3'b100 && total >= BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH && total < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH + B_BRAM_DEPTH;
+              write_b_valid = total >= BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH && total < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH + B_BRAM_DEPTH;
               addrb_b = total - BRAM_DEPTH - PT_BRAM_DEPTH - SK_BRAM_DEPTH;
               dinb_b = data_byte_out;
             end
@@ -717,7 +717,7 @@ module top_level
        .addrb(total - BRAM_DEPTH),
        .dinb(data_byte_out),
        .clkb(clk_100mhz),
-       .web(state_tl == 3'b100 && total >= BRAM_DEPTH && total < BRAM_DEPTH + PT_BRAM_DEPTH), // write always
+       .web(total >= BRAM_DEPTH && total < BRAM_DEPTH + PT_BRAM_DEPTH), // write always
        .enb(1'b1),
        .rstb(sys_rst),
        .regceb(1'b1),
@@ -753,7 +753,7 @@ module top_level
          .addrb(total - BRAM_DEPTH - PT_BRAM_DEPTH),
          .dinb(data_byte_out),
          .clkb(clk_100mhz),
-         .web(state_tl == 3'b100 && total >= BRAM_DEPTH + PT_BRAM_DEPTH && total < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH),
+         .web(total >= BRAM_DEPTH + PT_BRAM_DEPTH && total < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH),
          .enb(1'b1),
          .rstb(sys_rst),
          .regceb(1'b1),
@@ -880,7 +880,6 @@ module top_level
      if (sys_rst) begin
         idx <= 0;
         total_count <= 0;
-        total <= 0;
         addrb_A <= 0;
      end else begin
      

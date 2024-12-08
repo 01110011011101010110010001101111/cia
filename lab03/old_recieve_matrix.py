@@ -34,6 +34,7 @@ for idx in range(4*(25_250 + 1)):
     inp1 = int.from_bytes(ser.read(),'little')
     print(byte1, inp1) 
     assert byte1 == inp1
+
     # ser.write(int(byte1).to_bytes(1,'little'))
     # sleep(0.001)
 
