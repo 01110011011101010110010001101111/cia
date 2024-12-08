@@ -10,6 +10,10 @@ module top_level
    output logic [15:0] led, //16 green output LEDs (located right above switches)
    output logic [2:0]  rgb0, //RGB channels of RGB LED0
    output logic [2:0]  rgb1, //RGB channels of RGB LED1
+   output logic [3:0] ss0_an,//anode control for upper four digits of seven-seg display
+   output logic [3:0] ss1_an,//anode control for lower four digits of seven-seg display
+   output logic [6:0] ss0_c, //cathode controls for the segments of upper four digits
+   output logic [6:0] ss1_c, //cathode controls for the segments of lower four digits
    input wire 				 uart_rxd, // UART computer-FPGA
    output logic 			 uart_txd // UART FPGA-computer
 );
@@ -49,7 +53,6 @@ module top_level
    //                               .val_in(total_count),
    //                               .cat_out(ss_c),
    //                               .an_out({ss0_an, ss1_an}));
-
    //shut up those rgb LEDs for now (active high):
    assign rgb1 = 0; //set to 0.
    assign rgb0 = 0; //set to 0.
@@ -110,6 +113,18 @@ module top_level
      .valid_data_out(new_data_out),
      .data_out(data_byte_out)
    );
+
+   logic [6:0] ss_c; //used to grab output cathode signal for 7s leds
+   logic [7:0] msg_byte;
+   seven_segment_controller mssc(.clk_in(clk_100mhz),
+                                 .rst_in(sys_rst),
+                                 .val_in(total),
+                                 .cat_out(ss_c),
+                                 .an_out({ss0_an, ss1_an}));
+   assign ss0_c = ss_c; //control upper four digit's cathodes!
+   assign ss1_c = ss_c; //same as above but for lower four digits!
+
+
 
     // UART Transmitter to FTDI2232
     // TODO: instantiate the UART transmitter you just wrote, using the input signals from above.
