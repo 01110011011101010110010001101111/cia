@@ -56,6 +56,28 @@ def send_matrix():
         ser.write(int(13).to_bytes(1,'little'))
         sleep(0.001)
 
+    for idx in range((250 + 1)):
+        byte1 = idx % 256
+        ser.write(int(0).to_bytes(1,'little'))
+        sleep(0.001)
+
+        byte1 = idx % 256
+        ser.write(int(1).to_bytes(1,'little'))
+        sleep(0.001)
+
+        byte1 = idx % 256
+        ser.write(int(1).to_bytes(1,'little'))
+        sleep(0.001)
+
+        byte1 = idx % 256
+        ser.write(int(13).to_bytes(1,'little'))
+        sleep(0.001)
+
+    for idx in range(4*(2_510 + 1)):
+        byte1 = idx % 256
+        ser.write(int(byte1).to_bytes(1,'little'))
+        sleep(0.001)
+
 
 
 

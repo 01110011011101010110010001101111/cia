@@ -182,6 +182,77 @@ module top_level
        );
 
 
+   // only using port a for reads: we only use dout
+   logic [SK_BRAM_WIDTH-1:0]     douta_sk;
+   logic [SK_ADDR_WIDTH-1:0]     addra_sk;
+
+   // only using port b for writes: we only use din
+   logic [SK_BRAM_WIDTH-1:0]     dinb_sk;
+   logic [SK_ADDR_WIDTH-1:0]     addrb_sk;
+
+   xilinx_true_dual_port_read_first_2_clock_ram
+     #(.RAM_WIDTH(SK_BRAM_WIDTH),
+       .RAM_DEPTH(SK_BRAM_DEPTH),
+       .RAM_PERFORMANCE("HIGH_PERFORMANCE")) sk_bram
+       // .INIT_FILE(`FPATH(s.mem))) sk_bram
+       (
+        // PORT A
+        .addra(total_count - BRAM_DEPTH - PT_BRAM_DEPTH),
+        .dina(0), // we only use port A for reads!
+        .clka(clk_100mhz),
+        .wea(1'b0), // read only
+        .ena(1'b1),
+        .rsta(sys_rst),
+        .regcea(1'b1),
+        .douta(douta_sk),
+         // PORT B
+         .addrb(total - BRAM_DEPTH - PT_BRAM_DEPTH),
+         .dinb(data_byte_out),
+         .clkb(clk_100mhz),
+         .web(total >= BRAM_DEPTH + PT_BRAM_DEPTH && total < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH),
+         .enb(1'b1),
+         .rstb(sys_rst),
+         .regceb(1'b1),
+         .doutb() // we only use port B for writes!
+        );
+
+
+   // only using port a for reads: we only use dout
+   logic [B_BRAM_WIDTH-1:0]     douta_b;
+   logic [B_ADDR_WIDTH-1:0]     addra_b;
+
+   // only using port b for writes: we only use din
+   logic [B_BRAM_WIDTH-1:0]     dinb_b;
+   logic [B_ADDR_WIDTH-1:0]     addrb_b;
+   logic write_b_valid;
+
+   xilinx_true_dual_port_read_first_2_clock_ram
+     #(.RAM_WIDTH(B_BRAM_WIDTH),
+       .RAM_DEPTH(B_BRAM_DEPTH),
+        .RAM_PERFORMANCE("HIGH_PERFORMANCE")) b_bram
+        // .INIT_FILE(`FPATH(b.mem))) b_bram
+       (
+        // PORT A
+        .addra(total_count - BRAM_DEPTH - PT_BRAM_DEPTH - SK_BRAM_DEPTH),
+        .dina(0), // we only use port A for reads!
+        .clka(clk_100mhz),
+        .wea(1'b0), // read only
+        .ena(1'b1),
+        .rsta(sys_rst),
+        .regcea(1'b1),
+        .douta(douta_b),
+         // PORT B
+         .addrb(total - BRAM_DEPTH - PT_BRAM_DEPTH - SK_BRAM_DEPTH),
+         .dinb(data_byte_out),
+         .clkb(clk_100mhz),
+         .web(total >= BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH && total < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH + B_BRAM_DEPTH),
+         .enb(1'b1),
+         .rstb(sys_rst),
+         .regceb(1'b1),
+         .doutb() // we only use port B for writes!
+        );
+
+
    logic uart_data_valid;
  
    uart_transmit
@@ -208,25 +279,44 @@ module top_level
 
         if (sw[15]) begin
            if (!uart_busy) begin
-              case (idx)
+               case (idx)
                   2'b00: begin
-                      transmit_byte <= total_count < BRAM_DEPTH ? douta_A[7+24:24] : douta_pt;
+                      transmit_byte <= total_count < BRAM_DEPTH ? douta_A[7+24:24] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b[7:0];
                       idx <= 2'b01;
                   end
                   2'b01: begin
-                      transmit_byte <= total_count < BRAM_DEPTH ? douta_A[7+16:16] : douta_pt;
+                      transmit_byte <= total_count < BRAM_DEPTH ? douta_A[7+16:16] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b[7+8:8];
                       idx <= 2'b10;
                   end
                   2'b10: begin
-                      transmit_byte <= total_count < BRAM_DEPTH ? douta_A[7+8:8] : douta_pt;
+                      transmit_byte <= total_count < BRAM_DEPTH ? douta_A[7+8:8] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b[7+16:16];
                       idx <= 2'b11;
                   end
                   2'b11: begin
-                      transmit_byte <= total_count < BRAM_DEPTH ? douta_A[7+0:0] : douta_pt;
+                      transmit_byte <= total_count < BRAM_DEPTH ? douta_A[7+0:0] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b[7+24:24];
                       idx <= 2'b00;
                       total_count <= total_count + 1;
                   end
               endcase
+              // case (idx)
+              //     2'b00: begin
+              //         transmit_byte <= total_count < BRAM_DEPTH ? douta_A[7+24:24] : douta_pt;
+              //         idx <= 2'b01;
+              //     end
+              //     2'b01: begin
+              //         transmit_byte <= total_count < BRAM_DEPTH ? douta_A[7+16:16] : douta_pt;
+              //         idx <= 2'b10;
+              //     end
+              //     2'b10: begin
+              //         transmit_byte <= total_count < BRAM_DEPTH ? douta_A[7+8:8] : douta_pt;
+              //         idx <= 2'b11;
+              //     end
+              //     2'b11: begin
+              //         transmit_byte <= total_count < BRAM_DEPTH ? douta_A[7+0:0] : douta_pt;
+              //         idx <= 2'b00;
+              //         total_count <= total_count + 1;
+              //     end
+              // endcase
               uart_data_valid <= 1;//uart_transmit_buff;
               // uart_transmit_buff <= 1;
            end
