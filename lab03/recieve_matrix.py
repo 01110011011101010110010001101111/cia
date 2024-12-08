@@ -8,7 +8,7 @@ p = 2**10
 q = 2**16
 
 SERIAL_PORT_NAME = "/dev/cu.usbserial-8874292300481"
-BAUD_RATE = 115200 
+BAUD_RATE = 100000 
 
 ser = serial.Serial(SERIAL_PORT_NAME,BAUD_RATE)
 print("Serial port initialized")
@@ -97,7 +97,7 @@ for i in range(100):
 for i in range(251*4): # rest of A, useless rn
     bytes = ser.read()
     val = int.from_bytes(bytes,'little')
-    print(val)
+    # print(val)
 
 for i in range(100*4):
     print(f"m===================== {i}")
