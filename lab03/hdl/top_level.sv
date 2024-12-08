@@ -146,8 +146,8 @@ module top_level
     xilinx_true_dual_port_read_first_2_clock_ram
       #(.RAM_WIDTH(BRAM_WIDTH),
         .RAM_DEPTH(BRAM_DEPTH),
-        .RAM_PERFORMANCE("HIGH_PERFORMANCE"),
-        .INIT_FILE(`FPATH(A.mem))) audio_bram
+        .RAM_PERFORMANCE("HIGH_PERFORMANCE")) audio_bram
+        // .INIT_FILE(`FPATH(A.mem))) audio_bram
         (
          // PORT A
          .addra(addra_A),// sw), // total_count < BRAM_1_SIZE ? total_count : BRAM_1_SIZE),
