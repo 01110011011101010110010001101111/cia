@@ -33,7 +33,7 @@ idx = 0
 while True:
     print(idx, int.from_bytes(ser.read(),'little'))
     idx += 1
-    if idx > 150:
+    if idx > 4*(25_250 + 100 + 1 + 1):
         break
 """
 idx = 0

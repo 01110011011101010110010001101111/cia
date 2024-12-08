@@ -21,11 +21,11 @@ module top_level
    parameter BAUD_RATE = 100_000; // 115_200;
 
    parameter BRAM_WIDTH = 32;
-   parameter BRAM_DEPTH = 1 + 25; // _250;
+   parameter BRAM_DEPTH = 1 + 25_250;
    parameter ADDR_WIDTH = $clog2(BRAM_DEPTH);
  
    parameter PT_BRAM_WIDTH = 2;
-   parameter PT_BRAM_DEPTH = 1 + 10; // 0;
+   parameter PT_BRAM_DEPTH = 1 + 100;
    parameter PT_ADDR_WIDTH = $clog2(PT_BRAM_DEPTH);
 
    parameter SK_BRAM_WIDTH = 2;
@@ -37,7 +37,7 @@ module top_level
    parameter B_ADDR_WIDTH = $clog2(B_BRAM_DEPTH);
 
    // TODO: UPDATE TO HAVE ALL OF THE RELEVANT DEPTHS!!!
-   parameter MAX_COUNT = BRAM_DEPTH + PT_BRAM_DEPTH; // reading all 100k 
+   parameter MAX_COUNT = BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH + B_BRAM_DEPTH; // reading all 100k 
 
 
    //shut up those rgb LEDs for now (active high):
