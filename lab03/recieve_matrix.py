@@ -29,12 +29,36 @@ m = loaded_data["m"]
 # assert int.from_bytes(ser.read(),'little') == 0 
 # assert int.from_bytes(ser.read(),'little') == 0 
 
-idx = 0
-while True:
-    print(idx, int.from_bytes(ser.read(),'little'))
-    idx += 1
-    if idx > 4*(25_250 + 100 + 1 + 1 + 250 + 1 + 2_510 + 1):
-        break
+for idx in range(4*(25_250 + 1)):
+    byte1 = idx % 256
+    inp1 = int.from_bytes(ser.read(),'little')
+    print(byte1, inp1) 
+    assert byte1 == inp1
+    # ser.write(int(byte1).to_bytes(1,'little'))
+    # sleep(0.001)
+
+for idx in range((100 + 1)):
+    for _ in range(4):
+        inp = int.from_bytes(ser.read(),'little') 
+        print(1, inp) 
+        assert 1 == inp
+
+for idx in range((250 + 1)):
+    for _ in range(4):
+        assert 1 == int.from_bytes(ser.read(),'little')
+
+for idx in range(4*(2_510)):
+    byte1 = idx % 256
+    assert byte1 == int.from_bytes(ser.read(),'little')
+ 
+
+# idx = 0
+# while True:
+#     print(idx, int.from_bytes(ser.read(),'little'))
+#     idx += 1
+#     if idx > 4*(25_250 + 100 + 1 + 1 + 250 + 1 + 2_510 + 1):
+#     # if idx > 4*(25+ 100 + 1 + 1 + 250 + 1 + 2+ 1):
+#         break
 """
 idx = 0
 for row in A:

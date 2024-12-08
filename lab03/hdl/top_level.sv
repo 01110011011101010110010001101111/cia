@@ -281,19 +281,19 @@ module top_level
            if (!uart_busy) begin
                case (idx)
                   2'b00: begin
-                      transmit_byte <= total_count < BRAM_DEPTH ? douta_A[7+24:24] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b[7:0];
+                      transmit_byte <= total_count < BRAM_DEPTH ? douta_A[7+0:0] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b[7:0];
                       idx <= 2'b01;
                   end
                   2'b01: begin
-                      transmit_byte <= total_count < BRAM_DEPTH ? douta_A[7+16:16] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b[7+8:8];
+                      transmit_byte <= total_count < BRAM_DEPTH ? douta_A[7+8:8] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b[7+8:8];
                       idx <= 2'b10;
                   end
                   2'b10: begin
-                      transmit_byte <= total_count < BRAM_DEPTH ? douta_A[7+8:8] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b[7+16:16];
+                      transmit_byte <= total_count < BRAM_DEPTH ? douta_A[7+16:16] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b[7+16:16];
                       idx <= 2'b11;
                   end
                   2'b11: begin
-                      transmit_byte <= total_count < BRAM_DEPTH ? douta_A[7+0:0] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b[7+24:24];
+                      transmit_byte <= total_count < BRAM_DEPTH ? douta_A[7+24:24] : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH) ? douta_pt : (total_count < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH) ? douta_sk : douta_b[7+24:24];
                       idx <= 2'b00;
                       total_count <= total_count + 1;
                   end
