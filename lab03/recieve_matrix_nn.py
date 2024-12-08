@@ -8,7 +8,7 @@ p = 2**10
 q = 2**16
 
 SERIAL_PORT_NAME = "/dev/cu.usbserial-8874292300481"
-BAUD_RATE = 115200 
+BAUD_RATE = 100000 
 
 ser = serial.Serial(SERIAL_PORT_NAME,BAUD_RATE)
 print("Serial port initialized")
@@ -21,8 +21,16 @@ s = loaded_data["s"]
 m = loaded_data["m"]
 b = loaded_data["b"]
 nn = loaded_data["nn"]
+bias = np.array([-3,  2, -3, -2, -1, -1, -2,  0, -4, -3])
+
+# breakpoint()
 
 correct_A = np.dot(nn, A)%q
+
+# breakpoint()
+correct_A[:, 500]+=bias.astype(int)*2**6
+
+# breakpoint()
 
 # helper
 def polynomial_mult(s0, s1, size=N, base=q):
