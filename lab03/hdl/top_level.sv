@@ -66,11 +66,12 @@ module top_level
 
    logic transmit;
 
-   logic [1:0] state_tl;
+   logic [2:0] state_tl;
 
    always_ff @(posedge clk_100mhz) begin
     state_tl[0] <= sw[1];
     state_tl[1] <= sw[2];
+    state_tl[2] <= sw[3];
    end
    // assign state = 2'b01;
 
@@ -338,16 +339,16 @@ module top_level
         transmit <= 0;
      end else begin
         case(state_tl)
-          2'b00: begin
+          3'b000: begin
             transmit <= 1;
           end
-          2'b01: begin
+          3'b001: begin
             transmit <= done_enc_out;
           end
-          2'b10: begin
+          3'b010: begin
             transmit <= done_dec_out;
           end
-          2'b11: begin
+          3'b011: begin
             transmit <= done_nn_out;
           end
           default: begin
@@ -614,7 +615,7 @@ module top_level
 
     always_comb begin
       case (state_tl)
-            2'b00: begin
+            3'b000: begin
                 addra_A = total_count;
                 addra_pt = total_count - BRAM_DEPTH;
                 addra_sk = (total_count - BRAM_DEPTH - PT_BRAM_DEPTH);
@@ -622,7 +623,7 @@ module top_level
 
                 addrb_b = addrb - BRAM_DEPTH - PT_BRAM_DEPTH - SK_BRAM_DEPTH;
             end
-            2'b01: begin
+            3'b001: begin
               if (transmit) begin
                 addra_A = total_count;
                 addra_pt = total_count - BRAM_DEPTH;
@@ -640,7 +641,7 @@ module top_level
                 // addrb_b = addrb - BRAM_DEPTH - PT_BRAM_DEPTH - SK_BRAM_DEPTH;
               end
             end
-            2'b10: begin
+            3'b010: begin
                 if (transmit) begin
                 addra_A = total_count;
                 addra_pt = total_count - BRAM_DEPTH;
@@ -658,7 +659,7 @@ module top_level
                 // addrb_b = addrb - BRAM_DEPTH - PT_BRAM_DEPTH - SK_BRAM_DEPTH;
               end
             end
-            2'b11: begin
+            3'b011: begin
               if (transmit) begin
                 addra_A = total_count;
                 addra_pt = total_count - BRAM_DEPTH;
@@ -678,6 +679,11 @@ module top_level
                 addra_bias = nn_w_out;
                 // addrb_b = addrb - BRAM_DEPTH - PT_BRAM_DEPTH - SK_BRAM_DEPTH;
               end
+            end
+            3'b100: begin
+              write_b_valid = total >= BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH && total < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH + B_BRAM_DEPTH;
+              addrb_b = total - BRAM_DEPTH - PT_BRAM_DEPTH - SK_BRAM_DEPTH;
+              dinb_b = data_byte_out;
             end
             default: begin
             end
@@ -780,10 +786,10 @@ module top_level
         .regcea(1'b1),
         .douta(douta_b),
          // PORT B
-         .addrb(total - BRAM_DEPTH - PT_BRAM_DEPTH - SK_BRAM_DEPTH),
-         .dinb(data_byte_out),
+         .addrb(addrb_b),
+         .dinb(dinb_b),
          .clkb(clk_100mhz),
-         .web(total >= BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH && total < BRAM_DEPTH + PT_BRAM_DEPTH + SK_BRAM_DEPTH + B_BRAM_DEPTH),
+         .web(write_b_valid),
          .enb(1'b1),
          .rstb(sys_rst),
          .regceb(1'b1),
