@@ -23,34 +23,53 @@ A = loaded_data["A"]
 s = loaded_data["s"]
 m = loaded_data["m"]
 
-# # four 0s at the start
-# assert int.from_bytes(ser.read(),'little') == 0 
-# assert int.from_bytes(ser.read(),'little') == 0 
-# assert int.from_bytes(ser.read(),'little') == 0 
-# assert int.from_bytes(ser.read(),'little') == 0 
+idx = 0
 
-for idx in range(4*(25_250 + 1)):
-    byte1 = idx % 256
-    inp1 = int.from_bytes(ser.read(),'little')
-    print(byte1, inp1) 
-    assert byte1 == inp1
+for row in A:
+    for val in row:
+        byte1 = val % 256
+        byte2 = (val >> 8) % 256
 
-    # ser.write(int(byte1).to_bytes(1,'little'))
-    # sleep(0.001)
+        byte1_inp = int.from_bytes(ser.read(),'little')
+        print(idx, byte1, byte1_inp)
+        idx += 1
+        assert byte1 == byte1_inp
+        byte2_inp = int.from_bytes(ser.read(),'little')
+        print(idx, byte2, byte2_inp)
+        idx += 1
+        assert byte2 == byte2_inp
 
-for idx in range((100 + 1)):
-    for _ in range(4):
-        inp = int.from_bytes(ser.read(),'little') 
-        print(1, inp) 
-        assert 1 == inp
 
-for idx in range((250 + 1)):
-    for _ in range(4):
-        assert 1 == int.from_bytes(ser.read(),'little')
 
-for idx in range(4*(2_510)):
-    byte1 = idx % 256
-    assert byte1 == int.from_bytes(ser.read(),'little')
+# # # four 0s at the start
+# # assert int.from_bytes(ser.read(),'little') == 0 
+# # assert int.from_bytes(ser.read(),'little') == 0 
+# # assert int.from_bytes(ser.read(),'little') == 0 
+# # assert int.from_bytes(ser.read(),'little') == 0 
+# 
+# 
+# # for idx in range(4*(25_250 + 1)):
+# #     byte1 = idx % 256
+# #     inp1 = int.from_bytes(ser.read(),'little')
+# #     print(byte1, inp1) 
+# #     assert byte1 == inp1
+# # 
+# #     # ser.write(int(byte1).to_bytes(1,'little'))
+# #     # sleep(0.001)
+# 
+# for idx in range((100 + 1)):
+#     for _ in range(4):
+#         inp = int.from_bytes(ser.read(),'little') 
+#         print(1, inp) 
+#         assert 1 == inp
+# 
+# for idx in range((250 + 1)):
+#     for _ in range(4):
+#         assert 1 == int.from_bytes(ser.read(),'little')
+# 
+# for idx in range(4*(2_510)):
+#     byte1 = idx % 256
+#     assert byte1 == int.from_bytes(ser.read(),'little')
 
 
 
