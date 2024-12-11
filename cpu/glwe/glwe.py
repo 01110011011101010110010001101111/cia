@@ -112,6 +112,14 @@ def dec(B, c = 1):
     # can check bottom bits and add one if needed
     return np.round(B_res / (q / p)) / c
 
+def dec2(B, c = 1):
+    B_res = (np.array(B)) % q
+    for idx in range(len(A)):
+        B_res = (B_res - np.array(polynomial_mult((c * A[idx]) % q, (s[idx]) % q, N, q))) % q
+    # can check bottom bits and add one if needed
+    return np.round(B_res / (q / p))
+
+
 """
 Operations on ciphertext
 """
@@ -147,7 +155,8 @@ print("Average time taken: ", sum(timing)/100)'''
 print("inp:", np.array(m) % p)
 print("eq: 2x + 1")
 print("pt computation:", (3 * (np.array(m) % p)) % q)
-print("ct computation:", dec(mul_constant(enc(), 3), c=3))
+# print("ct computation:", dec(enc(), c=3))
+print("ct computation:", dec2(mul_constant(enc(), 3), c=3))
 # assert np.all(((1 * (np.array(m) % q/p)) % q/p) == dec(mul_constant(enc(), 2)))
 
 # print("pt computation:", ((np.array(m) % p) + 1) % p)
