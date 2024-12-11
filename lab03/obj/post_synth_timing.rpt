@@ -1,8 +1,8 @@
 Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
 ---------------------------------------------------------------------------------------------------------------------------------------------
 | Tool Version : Vivado v.2024.1 (lin64) Build 5076996 Wed May 22 18:36:09 MDT 2024
-| Date         : Mon Nov 25 08:09:22 2024
-| Host         : eecs-digital-40 running 64-bit Ubuntu 24.04.1 LTS
+| Date         : Sun Dec  8 17:43:35 2024
+| Host         : eecs-digital-24 running 64-bit Ubuntu 24.04.1 LTS
 | Command      : report_timing -file obj/post_synth_timing.rpt
 | Design       : top_level
 | Device       : 7s50-csga324
@@ -12,16 +12,16 @@ Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2024 Advanc
 
 Timing Report
 
-Slack (MET) :             6.183ns  (required time - arrival time)
-  Source:                 my_uart_transmit/clock_counter_reg[0]/C
+Slack (MET) :             2.923ns  (required time - arrival time)
+  Source:                 nn_loop/outer_N_loop/count_out_reg[0]/C
                             (rising edge-triggered cell FDRE clocked by gclk  {rise@0.000ns fall@4.000ns period=10.000ns})
-  Destination:            my_uart_transmit/curr_bit_reg[0]/CE
+  Destination:            nn_loop/A_addr_reg[13]/D
                             (rising edge-triggered cell FDRE clocked by gclk  {rise@0.000ns fall@4.000ns period=10.000ns})
   Path Group:             gclk
   Path Type:              Setup (Max at Slow Process Corner)
   Requirement:            10.000ns  (gclk rise@10.000ns - gclk rise@0.000ns)
-  Data Path Delay:        3.435ns  (logic 0.999ns (29.083%)  route 2.436ns (70.917%))
-  Logic Levels:           3  (LUT2=1 LUT5=1 LUT6=1)
+  Data Path Delay:        6.959ns  (logic 3.980ns (57.192%)  route 2.979ns (42.808%))
+  Logic Levels:           10  (CARRY4=7 LUT3=1 LUT5=1 LUT6=1)
   Clock Path Skew:        -0.145ns (DCD - SCD + CPR)
     Destination Clock Delay (DCD):    2.660ns = ( 12.660 - 10.000 ) 
     Source Clock Delay      (SCD):    2.920ns
@@ -40,18 +40,39 @@ Slack (MET) :             6.183ns  (required time - arrival time)
     N15                  IBUF (Prop_ibuf_I_O)         1.440     1.440 r  clk_100mhz_IBUF_inst/O
                          net (fo=1, unplaced)         0.800     2.240    clk_100mhz_IBUF
                          BUFG (Prop_bufg_I_O)         0.096     2.336 r  clk_100mhz_IBUF_BUFG_inst/O
-                         net (fo=17, unplaced)        0.584     2.920    my_uart_transmit/clk_100mhz_IBUF_BUFG
-                         FDRE                                         r  my_uart_transmit/clock_counter_reg[0]/C
+                         net (fo=1025, unplaced)      0.584     2.920    nn_loop/outer_N_loop/clk_100mhz_IBUF_BUFG
+                         FDRE                                         r  nn_loop/outer_N_loop/count_out_reg[0]/C
   -------------------------------------------------------------------    -------------------
-                         FDRE (Prop_fdre_C_Q)         0.456     3.376 r  my_uart_transmit/clock_counter_reg[0]/Q
-                         net (fo=8, unplaced)         1.003     4.379    my_uart_transmit/clock_counter_reg_n_0_[0]
-                         LUT6 (Prop_lut6_I0_O)        0.295     4.674 f  my_uart_transmit/start_i_4/O
-                         net (fo=1, unplaced)         0.449     5.123    my_uart_transmit/start_i_4_n_0
-                         LUT5 (Prop_lut5_I0_O)        0.124     5.247 f  my_uart_transmit/start_i_3/O
-                         net (fo=8, unplaced)         0.487     5.734    my_uart_transmit/start_i_3_n_0
-                         LUT2 (Prop_lut2_I1_O)        0.124     5.858 r  my_uart_transmit/curr_bit[3]_i_1/O
-                         net (fo=4, unplaced)         0.497     6.355    my_uart_transmit/tx_wire_out2_out
-                         FDRE                                         r  my_uart_transmit/curr_bit_reg[0]/CE
+                         FDRE (Prop_fdre_C_Q)         0.456     3.376 r  nn_loop/outer_N_loop/count_out_reg[0]/Q
+                         net (fo=24, unplaced)        0.730     4.106    nn_loop/outer_N_idx[0]
+                         CARRY4 (Prop_carry4_S[0]_CO[3])
+                                                      0.827     4.933 r  nn_loop/A_addr1_carry/CO[3]
+                         net (fo=1, unplaced)         0.009     4.942    nn_loop/A_addr1_carry_n_1
+                         CARRY4 (Prop_carry4_CI_CO[3])
+                                                      0.114     5.056 r  nn_loop/A_addr1_carry__0/CO[3]
+                         net (fo=1, unplaced)         0.000     5.056    nn_loop/A_addr1_carry__0_n_1
+                         CARRY4 (Prop_carry4_CI_O[1])
+                                                      0.348     5.404 r  nn_loop/A_addr1_carry__1/O[1]
+                         net (fo=3, unplaced)         0.330     5.734    nn_loop/outer_N_loop/A_addr1__54_carry__1_0[1]
+                         LUT3 (Prop_lut3_I1_O)        0.306     6.040 f  nn_loop/outer_N_loop/A_addr1__54_carry__0_i_9/O
+                         net (fo=3, unplaced)         0.467     6.507    nn_loop/outer_N_loop/A_addr1__54_carry__0_i_9_n_1
+                         LUT5 (Prop_lut5_I3_O)        0.124     6.631 r  nn_loop/outer_N_loop/A_addr1__54_carry__0_i_1/O
+                         net (fo=2, unplaced)         0.460     7.091    nn_loop/outer_N_loop/count_out_reg[2]_0[2]
+                         LUT6 (Prop_lut6_I0_O)        0.124     7.215 r  nn_loop/outer_N_loop/A_addr1__54_carry__0_i_5/O
+                         net (fo=1, unplaced)         0.000     7.215    nn_loop/outer_N_loop_n_42
+                         CARRY4 (Prop_carry4_S[3]_CO[3])
+                                                      0.401     7.616 r  nn_loop/A_addr1__54_carry__0/CO[3]
+                         net (fo=1, unplaced)         0.000     7.616    nn_loop/A_addr1__54_carry__0_n_1
+                         CARRY4 (Prop_carry4_CI_O[0])
+                                                      0.235     7.851 r  nn_loop/A_addr1__54_carry__1/O[0]
+                         net (fo=1, unplaced)         0.983     8.834    nn_loop/inner_k_loop/A_addr1[11]
+                         CARRY4 (Prop_carry4_S[3]_CO[3])
+                                                      0.697     9.531 r  nn_loop/inner_k_loop/A_addr_reg[11]_i_1/CO[3]
+                         net (fo=1, unplaced)         0.000     9.531    nn_loop/outer_N_loop/CO[0]
+                         CARRY4 (Prop_carry4_CI_O[1])
+                                                      0.348     9.879 r  nn_loop/outer_N_loop/A_addr_reg[14]_i_2/O[1]
+                         net (fo=1, unplaced)         0.000     9.879    nn_loop/A_addr0[13]
+                         FDRE                                         r  nn_loop/A_addr_reg[13]/D
   -------------------------------------------------------------------    -------------------
 
                          (clock gclk rise edge)      10.000    10.000 r  
@@ -60,16 +81,16 @@ Slack (MET) :             6.183ns  (required time - arrival time)
     N15                  IBUF (Prop_ibuf_I_O)         1.370    11.370 r  clk_100mhz_IBUF_inst/O
                          net (fo=1, unplaced)         0.760    12.130    clk_100mhz_IBUF
                          BUFG (Prop_bufg_I_O)         0.091    12.221 r  clk_100mhz_IBUF_BUFG_inst/O
-                         net (fo=17, unplaced)        0.439    12.660    my_uart_transmit/clk_100mhz_IBUF_BUFG
-                         FDRE                                         r  my_uart_transmit/curr_bit_reg[0]/C
+                         net (fo=1025, unplaced)      0.439    12.660    nn_loop/clk_100mhz_IBUF_BUFG
+                         FDRE                                         r  nn_loop/A_addr_reg[13]/C
                          clock pessimism              0.115    12.775    
                          clock uncertainty           -0.035    12.740    
-                         FDRE (Setup_fdre_C_CE)      -0.202    12.538    my_uart_transmit/curr_bit_reg[0]
+                         FDRE (Setup_fdre_C_D)        0.062    12.802    nn_loop/A_addr_reg[13]
   -------------------------------------------------------------------
-                         required time                         12.538    
-                         arrival time                          -6.355    
+                         required time                         12.802    
+                         arrival time                          -9.879    
   -------------------------------------------------------------------
-                         slack                                  6.183    
+                         slack                                  2.923    
 
 
 
