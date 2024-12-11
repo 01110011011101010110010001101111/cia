@@ -43,7 +43,6 @@ If ADD = 0, will subtract poly from b
                     sum[31:16] <= 16'b0;
                     // sum[31:16] <= - poly_in[31:16] + ((poly_idx == 0)?16'b0:sum[31:16]) + ((poly_idx == 0)?b_in[31:16]:16'b0);
                 end
-                
             end else begin
                 // waiting
                 sum_valid <= 0;

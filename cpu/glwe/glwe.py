@@ -33,7 +33,7 @@ if(False):
         pickle.dump(data, f)
     print(f"Data saved to {pickle_file}.")
 else:
-    with open('/Users/ruth/6.2050/fpga-project/Asm.pkl', 'rb') as f:
+    with open('Asm.pkl', 'rb') as f:
         loaded_data = pickle.load(f)
 
     A = loaded_data["A"]
@@ -118,6 +118,7 @@ def dec2(B, c = 1):
         B_res = (B_res - np.array(polynomial_mult((c * A[idx]) % q, (s[idx]) % q, N, q))) % q
     # can check bottom bits and add one if needed
     return np.round(B_res / (q / p))
+
 
 """
 Operations on ciphertext

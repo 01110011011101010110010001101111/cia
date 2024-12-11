@@ -132,6 +132,9 @@ module top_level
     logic [7:0] transmit_byte;
     logic uart_data_valid;
  
+    logic trig_trans = 0;
+    logic inc_trans = 0;
+
     uart_transmit
     #(  .INPUT_CLOCK_FREQ(100_000_000), // 100 MHz
         .BAUD_RATE(BAUD_RATE)

@@ -71,7 +71,6 @@ module enc_addr_looper
                 N_out <= outer_N_idx;
                 done <= ((outer_N_idx == DEPTH-1) && (inner_k_idx == HALF_DEPTH -1))? 1:0;
             end
-            
         end
     end
 
